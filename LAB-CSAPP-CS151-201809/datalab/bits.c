@@ -95,7 +95,7 @@ the coding rules are less strict.  You are allowed to use looping and
 conditional control.  You are allowed to use both ints and unsigneds.
 You can use arbitrary integer and unsigned constants.
 
-You are expressly forbidden to:
+You are expressly forbigedden to:
   1. Define or use any macros.
   2. Define any additional functions in this file.
   3. Call any functions.
@@ -139,8 +139,10 @@ NOTES:
  *   Rating: 1
  */
 int bitAnd(int x, int y) {
-  return 2;
+  return ~(~x | ~y);
 }
+
+
 /* 
  * getByte - Extract byte n from word x
  *   Bytes numbered from 0 (LSB) to 3 (MSB)
@@ -150,16 +152,13 @@ int bitAnd(int x, int y) {
  *   Rating: 2
  */
 int getByte(int x, int n) {
-
-
-
-
-
-
-
-  return 2;
-
+  /*int z=x>>(n*8);
+  z=z&0x0000FF;
+  return z;*/
+  return (x>>(n<<3))&0x0000FF;
 }
+
+
 /* 
  * logicalShift - shift x to the right by n, using a logical shift
  *   Can assume that 0 <= n <= 31
@@ -169,7 +168,16 @@ int getByte(int x, int n) {
  *   Rating: 3 
  */
 int logicalShift(int x, int n) {
-  return 2;
+  /*
+  1. rightShift x>>n Right if x>=0 && (n=0 || n>0)
+                     False if x<0
+  2. construct ox7FFFFFFF to make first n bit be zero
+                     False if n==0
+  3. leftShift 1 bit and add 1 when n==0
+  */
+ //int F=~(1<<31);
+ //printf('%f',&F);
+  return (x>>n)&(~(1<<31)>>(n+(~(1)+1)+!n)<<(!n) | 0x1);
 }
 /*
  * bitCount - returns count of number of 1's in word
@@ -179,7 +187,22 @@ int logicalShift(int x, int n) {
  *   Rating: 4
  */
 int bitCount(int x) {
-  return 2;
+  /* So So difficult
+  This method is based on Divide and Conquer
+  Is also known as haming weight "popcount" or "sideways addition"
+  'variable-precision SWAR algorithm'
+  References 1.https://stackoverflow.com/questions/3815165/how-to-implement-bitcount-using-only-bitwise-operators
+             2.http://graphics.stanford.edu/~seander/bithacks.html#CountBitsSetParallel
+             3.https://stackoverflow.com/questions/109023/how-to-count-the-number-of-set-bits-in-a-32-bit-integer
+  */
+  int c=0;
+  int v=x;
+  c = (v & 0x55555555) + ((v >> 1) & 0x55555555);
+  c = (c & 0x33333333) + ((c >> 2) & 0x33333333);
+  c = (c & 0x0F0F0F0F) + ((c >> 4) & 0x0F0F0F0F);
+  c = (c & 0x00FF00FF) + ((c >> 8) & 0x00FF00FF);
+  c = (c & 0x0000FFFF) + ((c >> 16)& 0x0000FFFF);
+  return c;
 }
 /* 
  * bang - Compute !x without using !
@@ -189,7 +212,11 @@ int bitCount(int x) {
  *   Rating: 4 
  */
 int bang(int x) {
-  return 2;
+  /*
+  Key point  abs(x)=~x+1
+  and (x | abs(x) )>>31 ==-1
+  */
+  return ((((~x)+1)|x)>>31)+1;
 }
 /* 
  * tmin - return minimum two's complement integer 
@@ -198,7 +225,7 @@ int bang(int x) {
  *   Rating: 1
  */
 int tmin(void) {
-  return 2;
+  return (~0)<<31;
 }
 /* 
  * fitsBits - return 1 if x can be represented as an 
@@ -210,7 +237,9 @@ int tmin(void) {
  *   Rating: 2
  */
 int fitsBits(int x, int n) {
-  return 2;
+  //To see whether the (n-1) bit equals to all MSB (w-n) bits
+  int t=x>>(~0+n);
+  return (!t)|(!(t+1));
 }
 /* 
  * divpwr2 - Compute x/(2^n), for 0 <= n <= 30
@@ -221,7 +250,13 @@ int fitsBits(int x, int n) {
  *   Rating: 2
  */
 int divpwr2(int x, int n) {
-    return 2;
+    int bias,flag;//bias is the bias needed for negative number
+	//flag is the MSB of x
+	  flag=(x>>31);
+  	bias=(1<<n)+(~0);
+	  bias&=flag;//Only negative numbers need bias
+  	x+=bias;
+  	return x>>n;
 }
 /* 
  * negate - return -x 
@@ -231,7 +266,7 @@ int divpwr2(int x, int n) {
  *   Rating: 2
  */
 int negate(int x) {
-  return 2;
+  return ~x+1;
 }
 /* 
  * isPositive - return 1 if x > 0, return 0 otherwise 
@@ -241,7 +276,8 @@ int negate(int x) {
  *   Rating: 3
  */
 int isPositive(int x) {
-  return 2;
+  int flag=(x>>31)&0x01;
+  return (!flag)^(!x); // for x==0
 }
 /* 
  * isLessOrEqual - if x <= y  then return 1, else return 0 
@@ -251,6 +287,19 @@ int isPositive(int x) {
  *   Rating: 3
  */
 int isLessOrEqual(int x, int y) {
+  //we can not use y-x to avoid overflow
+	//This problem is too hard so I take reference to Internet
+	//when x and y has the same MSB，calculate y-x then !it
+	//else just return x_flag(the MSB of x)
+  /*
+	int y_minus_x_flag,x_flag,y_flag,y_minus_x=y+~x+1;
+	//flag means the MSB of a number
+	//calculate y-x
+	y_minus_x=y+~x+1;
+	y_minus_x_flag=!!(y_minus_x>>31);//a new way to get the MSB of a number
+	x_flag=!!(x>>31);
+	y_flag=!!(y>>31);
+	return (!y_minus_x_flag&(!(x_flag^y_flag))) | (x_flag&(x_flag^y_flag));*/
   return 2;
 }
 /*
@@ -261,6 +310,13 @@ int isLessOrEqual(int x, int y) {
  *   Rating: 4
  */
 int ilog2(int x) {
+  //This program takes refrence to the Internet
+	//First consider the First 16 bit of x,if x>0xffff then the last 16 bit is useless so we can do right shift
+	//After the right shift,what is left is the original First 16 bits
+	//t records the answer
+	//use (!!x) as a representation of (x!=0)
+	//use bit-or to do add operation
+  //return 2;
   return 2;
 }
 /* 
