@@ -331,7 +331,13 @@ int ilog2(int x) {
  *   Rating: 2
  */
 unsigned float_neg(unsigned uf) {
- return 2;
+
+  int exp = (0x000000FF)<<23;
+  int frac=uf&0x7FFFF;
+  if((exp&uf)==exp&&frac){
+    return x;
+  }
+ return (uf)^(1<<31);
 }
 /* 
  * float_i2f - Return bit-level equivalent of expression (float) x
@@ -343,7 +349,27 @@ unsigned float_neg(unsigned uf) {
  *   Rating: 4
  */
 unsigned float_i2f(int x) {
-  return 2;
+  int flag=x>>31;
+  int posi=1;
+  int frac=0;
+  int exp=0;
+
+  # flag is the sign 
+  if(flag){
+    x=~x+1;
+  }
+  # the first position is not zero
+  while(x){
+    posi++;
+    x=x>>1;
+  }
+  # get the exp
+  exp=posi-1+127;
+
+  # get the frac
+  frac=(1>>)
+
+
 }
 /* 
  * float_twice - Return bit-level equivalent of expression 2*f for
