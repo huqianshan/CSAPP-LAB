@@ -367,7 +367,7 @@ unsigned float_i2f(int x) {
   exp=posi-1+127;
 
   # get the frac
-  frac=(1>>)
+  frac=(1>>);
 
 
 }
