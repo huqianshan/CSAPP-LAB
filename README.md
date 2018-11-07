@@ -23,3 +23,4 @@ Finished:
     - Data
     - Advanced topic
 - Try to use VScode to push GitHub
+- Use git branch feature to synchronic betwenn Win10 and Ubuntu
