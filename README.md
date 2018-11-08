@@ -1,5 +1,7 @@
 计算机组成原理
 
+
+
 Resource:
 
 - 计算机组成与系统结构第二版 清华大学出版社 杨若瑜等编著
@@ -22,5 +24,13 @@ Finished:
     - Procedures
     - Data
     - Advanced topic
+  - 第四章　存储器层次结构
+
+    - 存储技术　［Ram,Disk,SSD,Locliaty(局部性)］
+
+- LAB 
+  - [x] CPP LAB
+  - [x] Data LAB
+  - [x] Bomb LAB (4/6)
 - Try to use VScode to push GitHub
 - Use git branch feature to synchronic betwenn Win10 and Ubuntu
