@@ -4,6 +4,9 @@
 #include<string.h>
 #include<stdio.h> //fopen 
 
+
+#define Magic_Max_Lru 999
+
 typedef struct{
     int valid;
     int tag;
@@ -98,6 +101,29 @@ int initSimCache(int s,int e,int b,Sim_Cache* cache){
 
     return 0;
 }
+
+
+int getSet(int addr,int s,int b){
+    addr=addr>>b;
+    int mask=(1<<s)-1;
+    return addr&mask;
+}
+
+int getTag(int addr,int s,int b){
+    return addr>>(s+b);
+}
+
+int findMinLru(Sim_Cache* cache,int set_bits){
+    int i=0;
+    int minIndex=0;
+
+}
+
+
+
+
+
+
 
 int main(int argc,char** argv)
 {
