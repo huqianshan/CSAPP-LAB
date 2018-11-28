@@ -11,7 +11,7 @@ Resource:
 
 Finished:
 
-- 01 C Programming Lab: Assessing Your C Programming Skills
+
   ---
   - 第一章 计算机系统漫游
   - 第二章 信息的表示和处理
@@ -30,12 +30,22 @@ Finished:
     - 存储器层次结构　
     - 高速缓存`cache` 　[直接相联．组相联．全相联．`cache`友好代码]
   - 第五章　链接`Linking`
-    - 静态链接
+    - 静态链接 目标文件 可重定位目标文件
+    - 动态链接 重定位 共享库
+  - 第六章 异常控制流 `Exception Control Flow`
+    - 异常
+      - 异常处理
+      - 异常分类
+    - 进程
+      - 逻辑控制流 上下文切换
+      - 私有地址空间 虚拟内存空间
+    - 进程控制
+      - 回收子进程 僵尸进程 `fork`和` execve`
+    - 信号 `Sigal`
 
 - LAB 
-  - [x] CPP LAB
+  - [x] CPP LAB (C Programming Lab: Assessing Your C Programming Skills)
   - [x] Data LAB
   - [x] Bomb LAB (4/6)
   - [x] Cache Lab (4/10)
-- Try to use VScode to push GitHub
-- Use git branch feature to synchronic betwenn Win10 and Ubuntu
+
