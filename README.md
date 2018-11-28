@@ -26,11 +26,16 @@ Finished:
     - Advanced topic
   - 第四章　存储器层次结构
 
-    - 存储技术　［Ram,Disk,SSD,Locliaty(局部性)］
+    - 存储技术　　　　　［Ram,Disk,SSD,Locliaty(局部性)］
+    - 存储器层次结构　
+    - 高速缓存`cache` 　[直接相联．组相联．全相联．`cache`友好代码]
+  - 第五章　链接`Linking`
+    - 静态链接
 
 - LAB 
   - [x] CPP LAB
   - [x] Data LAB
   - [x] Bomb LAB (4/6)
+  - [x] Cache Lab (4/10)
 - Try to use VScode to push GitHub
 - Use git branch feature to synchronic betwenn Win10 and Ubuntu
