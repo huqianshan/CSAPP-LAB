@@ -17,21 +17,73 @@ int is_transpose(int M, int N, int A[N][M], int B[M][N]);
  *     will be graded on for Part B of the assignment. Do not change
  *     the description string "Transpose submission", as the driver
  *     searches for that string to identify the transpose function to
- *     be graded. 
+ *     be graded.  
  */
 char transpose_submit_desc[] = "Transpose submission";
 void transpose_submit(int M, int N, int A[N][M], int B[M][N])
 {
+    
+if(M==32){
+   for(int i=0;i<4;i++){
+       for(int j=0;j<4;j++){
+           for(int z=0;z<8;z++){
+               int t1=A[i*8+z][j*8];
+               int t2=A[i*8+z][j*8+1];
+               int t3=A[i*8+z][j*8+2];
+               int t4=A[i*8+z][j*8+3];
 
-        int i, j, tmp;
+               int t5=A[i*8+z][j*8+4];
+               int t6=A[i*8+z][j*8+5];
+               int t7=A[i*8+z][j*8+6];
+               int t8=A[i*8+z][j*8+7];
 
-    for (i = 0; i < N; i++) {
-        for (j = 0; j < M; j++) {
-            tmp = A[i][j];
-            B[j][i] = tmp;
+
+               B[j*8][i*8+z]=t1;
+               B[j*8+1][i*8+z]=t2;
+               B[j*8+2][i*8+z]=t3;
+               B[j*8+3][i*8+z]=t4;
+
+               B[j*8+4][i*8+z]=t5;
+               B[j*8+5][i*8+z]=t6;
+               B[j*8+6][i*8+z]=t7;
+               B[j*8+7][i*8+z]=t8;
+               
+           }
+       }
+   }
+}else if(M==64){
+     for(int i=0;i<16;i++){
+         for(int j=0;j<16;j++){
+             for(int z=0;z<4;z++){
+                 int t1=A[i*4+z][j*4];
+                 int t2=A[i*4+z][j*4+1];
+                 int t3=A[i*4+z][j*4+2];
+                 int t4=A[i*4+z][j*4+3];
+
+                 B[j*4][i*4+z]=t1;
+                 B[j*4+1][i*4+z]=t2;
+                 B[j*4+2][i*4+z]=t3;
+                 B[j*4+3][i*4+z]=t4;
+             }
+         }
+     }
+}else{
+    for(int i=0;i<N;i+=16){
+        for(int j=0;j<M;j+=16){
+            for(int z=i;z<i+16&&z<N;z++){
+                for(int k=j;k<j+16&&k<M;k++){
+                    B[k][z]=A[z][k];
+                }
+            }
         }
-    } 
+    }
 }
+
+
+      
+
+} 
+
 
 /* 
  * You can define additional transpose functions below. We've defined
@@ -55,6 +107,26 @@ void trans(int M, int N, int A[N][M], int B[M][N])
 
 }
 
+char trans_new[]="4*4 For 64*64";
+void trans_no_tem(int M,int N,int A[N][M],int B[M][N]){
+     for(int i=0;i<16;i++){
+         for(int j=0;j<16;j++){
+             for(int z=0;z<4;z++){
+                 int t1=A[i*4+z][j*4];
+                 int t2=A[i*4+z][j*4+1];
+                 int t3=A[i*4+z][j*4+2];
+                 int t4=A[i*4+z][j*4+3];
+
+                 B[j*4][i*4+z]=t1;
+                 B[j*4+1][i*4+z]=t2;
+                 B[j*4+2][i*4+z]=t3;
+                 B[j*4+3][i*4+z]=t4;
+
+             }
+         }
+     }
+}
+
 /*
  * registerFunctions - This function registers your transpose
  *     functions with the driver.  At runtime, the driver will
@@ -69,6 +141,8 @@ void registerFunctions()
 
     /* Register any additional transpose functions */
     registerTransFunction(trans, trans_desc); 
+
+    //registerTransFunction( trans_no_tem,trans_new); 
 
 }
 
