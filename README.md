@@ -42,10 +42,12 @@ Finished:
     - 进程控制
       - 回收子进程 僵尸进程 `fork`和` execve`
     - 信号 `Sigal`
+   - 第七章 虚拟内存
+   - 第八章 动态分配
 
 - LAB 
   - [x] CPP LAB (C Programming Lab: Assessing Your C Programming Skills)
   - [x] Data LAB
   - [x] Bomb LAB (4/6)
-  - [x] Cache Lab (4/10)
+  - [x] Cache Lab (9/10)
 
