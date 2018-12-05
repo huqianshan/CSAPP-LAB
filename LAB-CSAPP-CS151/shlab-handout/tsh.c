@@ -95,7 +95,7 @@ int main(int argc, char **argv)
     int emit_prompt = 1; /* emit prompt (default) */
 
     /* Redirect stderr to stdout (so that driver will get all output
-     * on the pipe connected to stdout) */
+     * on the pipe connected to stdout) flag 1*/
     dup2(1, 2);
 
     /* Parse the command line */
