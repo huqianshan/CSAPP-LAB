@@ -44,10 +44,14 @@ int main(void){
         printf("0x%x exited with 0x%x \n",pid,WEXITSTATUS(status));
         printf("status %d\n",status);
     }*/
-    if(signal(SIGINT,sigint_hadler)==SIG_ERR){
+    /*if(signal(SIGINT,sigint_hadler)==SIG_ERR){
         printf("signal error\n");
     }
-    pause();
+    pause();*/
+    for(int i=0;i<3;i++){
+        fork();
+        printf("%d\n",i);
+    }
 
     return 0;
 }
