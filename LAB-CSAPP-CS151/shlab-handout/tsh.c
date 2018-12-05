@@ -164,8 +164,36 @@ int main(int argc, char **argv)
  * when we type ctrl-c (ctrl-z) at the keyboard.  
 */
 void eval(char *cmdline) 
-{
+{   
+    
+    char *argv[MAXARGS]; /* Argument list execve() */
+    char buf[MAXLINE];   /* Holds modified command line */
+    int bg;              /* Should the job run in bg or fg? */
+    pid_t pid;           /* Process id */
+    
+    strcpy(buf, cmdline);
+    bg = parseline(buf, argv);       //解析命令行函数都提供好了
+    if (argv[0] == NULL)  
+    return;   /* Ignore empty lines */
+
+    if (!builtin_cmd(argv)) { 
+        if ((pid = fork()) == 0) {   /* 子进程来执行job */
+            if (execve(argv[0], argv, environ) < 0) {
+                printf("%s: Command not found.\n", argv[0]);
+                exit(0);
+            }
+        }
+    /* 如果是前台作业，主进程需要等待子进程运行完毕 */
+    if (!bg) {
+        int status;
+        if (waitpid(pid, &status, 0) < 0)
+        unix_error("waitfg: waitpid error");
+    }
+    else
+        printf("%d %s", pid, cmdline);
+    }
     return;
+
 }
 
 /* 
@@ -230,7 +258,10 @@ int parseline(const char *cmdline, char **argv)
  *    it immediately.  
  */
 int builtin_cmd(char **argv) 
-{
+{   
+    if(strcmp(argv[0],"quit")==0){
+        exit(0);
+    }
     return 0;     /* not a builtin command */
 }
 
