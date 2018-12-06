@@ -199,18 +199,18 @@ void eval(char *cmdline)
         } 
     /* 如果是前台作业，主进程需要等待子进程运行完毕 */
     
-    if (!bg) {
-
-        int temAdd=addjob(jobs,pid,FG,cmdline);
-        int status;
-        if (waitpid(pid, &status, 0) < 0)
-            unix_error("waitfg: waitpid error");
-        sigprocmask(SIG_SETMASK,&prev_all,NULL);
+    if(bg==0){
+        addjob(jobs,pid,FG,cmdline);
+    }else{
+        addjob(jobs,pid,BG,cmdline);
     }
-    else{
-        int temAdd=addjob(jobs,pid,BG,cmdline);
-        printf("%d %s", pid, cmdline);
-    }     
+    sigprocmask(SIG_SETMASK,&pre_all,NULL);
+    if(bg==0){
+        printf("[%d] (%d) %s ",pid2jid(pid),pid,cmdline);
+    }else{
+        waitfg(pid);
+    }
+
     }
     return;
 
@@ -298,7 +298,43 @@ int builtin_cmd(char **argv)
  */
 void do_bgfg(char **argv) 
 {   
-
+    if(argv[1]==NULL){
+        printf("%s need requires a pid or Jid argument\n",argv[1])
+    }
+    char* id=argv[1];
+    job_t* job;
+    int jobid;
+    if(id[0]=='%'){
+        if(id[1]>'0'&&id[1]<'9'){
+            jobid=atoi(id+1);
+            job=getjobjid(jobs,jobid);
+            if(job==NULL){
+                printf("%s: No such job\n",argv[1]);
+                return;
+            }
+        }else{
+            printf("%s: must be a %%jobid or pid\n",argv[0]);
+        }
+    }else{
+        if(id[0]>'0'&&id[0]<'9'){
+            jobid=atoi(id[0]);
+            job=getjobpid(jobid);
+            if(job==NULL){
+                printf("(%s) No such process\n",argv[1]);
+                return;
+            }
+        }else{
+            printf("%s: argument must be PID or %%jobid\n",argv[0]);
+        }
+    }
+    kill(-(job->pid),SIGCONT);
+    if(strcmp(argv[0],"bg")==0){
+        job->state=BG;
+        printf("[%d] (%d) %s",job->jid,job->pid,job->cmdline);
+    }else if(strcmp(argv[0],"fg")==0){
+        job->state=FG;
+        waitfg(job->pid);
+    }
     return;
 }
 
