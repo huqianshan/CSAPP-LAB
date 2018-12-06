@@ -156,41 +156,61 @@ int main(int argc, char **argv)
  * eval - Evaluate the command line that the user has just typed in
  * 
  * If the user has requested a built-in command (quit, jobs, bg or fg)
- * then execute it immediately. Otherwise, fork a child process and
- * run the job in the context of the child. If the job is running in
- * the foreground, wait for it to terminate and then return.  Note:
- * each child process must have a unique process group ID so that our
+ * then execute it immediately.
+ * Otherwise, fork a child process and run the job in the context of the child. 
+ * If the job is running in the foreground, wait for it to terminate and then return.  
+ * Note: each child process must have a unique process group ID so that our
  * background children don't receive SIGINT (SIGTSTP) from the kernel
  * when we type ctrl-c (ctrl-z) at the keyboard.  
 */
 void eval(char *cmdline) 
 {   
-    
+
     char *argv[MAXARGS]; /* Argument list execve() */
     char buf[MAXLINE];   /* Holds modified command line */
     int bg;              /* Should the job run in bg or fg? */
     pid_t pid;           /* Process id */
     
+    sigset_t mask_all,mask_one,pre_all;
+    // initialize signal
+    sigfillset(&mask_all);
+    sigemptyset(&mask_one);
+    sigaddset(&mask_one,SIGCHLD);
+    Signal(SIGCHLD,sigchld_handler);
+
     strcpy(buf, cmdline);
     bg = parseline(buf, argv);       //解析命令行函数都提供好了
     if (argv[0] == NULL)  
-    return;   /* Ignore empty lines */
+        return;   /* Ignore empty lines */
 
     if (!builtin_cmd(argv)) { 
+        // block SIGCHLD signal before fork;
+        sigprocmask(SIG_BLOCK,&mask_one,&pre_all);
         if ((pid = fork()) == 0) {   /* 子进程来执行job */
+        // Unblock
+            sigprocmask(SIG_SETMASK,&pre_all,NULL);
+            if(setpid(0,0)<0){
+                unix_error("setpid error");                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    
+            }
             if (execve(argv[0], argv, environ) < 0) {
                 printf("%s: Command not found.\n", argv[0]);
                 exit(0);
             }
-        }
+        } 
     /* 如果是前台作业，主进程需要等待子进程运行完毕 */
+    
     if (!bg) {
+
+        int temAdd=addjob(jobs,pid,FG,cmdline);
         int status;
         if (waitpid(pid, &status, 0) < 0)
-        unix_error("waitfg: waitpid error");
+            unix_error("waitfg: waitpid error");
+        sigprocmask(SIG_SETMASK,&prev_all,NULL);
     }
-    else
+    else{
+        int temAdd=addjob(jobs,pid,BG,cmdline);
         printf("%d %s", pid, cmdline);
+    }     
     }
     return;
 
@@ -262,6 +282,14 @@ int builtin_cmd(char **argv)
     if(strcmp(argv[0],"quit")==0){
         exit(0);
     }
+    if(strcmp(argv[0],"jobs")==0){
+        listjobs(jobs);
+        return 1;
+    }
+    if(strcmp(argv[0],"bg")==0||strcmp(argv[0],"fg")==0){
+        do_bgfg(argv);
+        return 1;
+    }
     return 0;     /* not a builtin command */
 }
 
@@ -269,7 +297,8 @@ int builtin_cmd(char **argv)
  * do_bgfg - Execute the builtin bg and fg commands
  */
 void do_bgfg(char **argv) 
-{
+{   
+
     return;
 }
 
@@ -277,7 +306,10 @@ void do_bgfg(char **argv)
  * waitfg - Block until process pid is no longer the foreground process
  */
 void waitfg(pid_t pid)
-{
+{   
+    while(pid=fgpid(jobs)){
+        sleep(0);
+    }
     return;
 }
 
