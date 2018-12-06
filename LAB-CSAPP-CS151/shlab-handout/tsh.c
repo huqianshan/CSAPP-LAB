@@ -37,7 +37,7 @@
 
 /* Global variables */
 extern char **environ;      /* defined in libc */
-char prompt[] = "tsh> ";    /* command line prompt (DO NOT CHANGE) */
+char prompt[] = "hujinlei'sSH> ";    /* command line prompt (DO NOT CHANGE) */
 int verbose = 0;            /* if true, print additional output */
 int nextjid = 1;            /* next job ID to allocate */
 char sbuf[MAXLINE];         /* for composing sprintf messages */
@@ -206,8 +206,9 @@ void eval(char *cmdline)
     }
     sigprocmask(SIG_SETMASK,&pre_all,NULL);
     if(bg==0){
-        printf("[%d] (%d) %s ",pid2jid(pid),pid,cmdline);
+       // printf("[%d] (%d) %s ",pid2jid(pid),pid,cmdline);
     }else{
+        printf("[%d] (%d) %s",pid2jid(pid),pid,cmdline);
         waitfg(pid);
     }
 
@@ -361,9 +362,26 @@ void waitfg(pid_t pid)
  *     currently running children to terminate.  
  */
 void sigchld_handler(int sig) 
-{
+{  
+    pid_t pid;
+    int status,child_sig;
+    while((pid = waitpid(-1, &status, WUNTRACED | WNOHANG)) > 0 ){  
+      //  printf("Handling chlid proess %d\n", (int)pid);  
+        /*handle SIGTSTP*/  
+        if( WIFSTOPPED(status) )  
+            sigtstp_handler( WSTOPSIG(status) );  
+        /*handle child process interrupt by uncatched signal*/  
+        else if( WIFSIGNALED(status) ) {  
+            child_sig = WTERMSIG(status);  
+            if(child_sig == SIGINT)  
+                sigint_handler(child_sig);  
+        }  
+        else      
+            deletejob(jobs, pid);  
+    }  
     return;
-}
+}  
+    
 
 /* 
  * sigint_handler - The kernel sends a SIGINT to the shell whenver the
@@ -371,7 +389,14 @@ void sigchld_handler(int sig)
  *    to the foreground job.  
  */
 void sigint_handler(int sig) 
-{
+{  
+    pid_t pid = fgpid(jobs);
+    int jid = pid2jid(pid);
+    if(pid!=0){
+        printf("Job [%d] terminated by SIGINT.\n",jid);
+        deletejob(jobs,pid);
+        kill(-pid,sig);
+    }
     return;
 }
 
@@ -381,8 +406,16 @@ void sigint_handler(int sig)
  *     foreground job by sending it a SIGTSTP.  
  */
 void sigtstp_handler(int sig) 
-{
+{   
+    pid_t pid = fgpid(jobs);
+    int jid = pid2jid(pid);
+    if(pid!=0){
+        printf("Job [%d] stopped by SIGINT.\n",jid);
+        (*getjobpid(jobs,pid)).state = ST;;
+        kill(-pid,sig);
+    }
     return;
+
 }
 
 /*********************

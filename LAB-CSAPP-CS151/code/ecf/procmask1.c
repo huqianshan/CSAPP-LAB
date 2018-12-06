@@ -41,3 +41,4 @@ int main(int argc, char **argv)
     exit(0);
 }
 /* $end procmask1 */
+i
