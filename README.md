@@ -50,4 +50,5 @@ Finished:
   - [x] Data LAB
   - [x] Bomb LAB (4/6)
   - [x] Cache Lab (9/10)
+  - [x] Shell Lab (10/10)
 
