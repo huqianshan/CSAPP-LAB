@@ -75,28 +75,28 @@ static void* coalesce(void* bp){
     size_t size=GET_SIZE(HDRP(bp));
 
     /* case One both before and after block is malloced*/
-    if(bef_alloc==1 && aft_alloc==1){
+    if(bef_alloc && aft_alloc){
         return bp;
     }
     /* case Two Only before is malloced*/
-    if(bef_alloc==1 && aft_alloc==0){
+    if(bef_alloc && !aft_alloc){
         size+=GET_SIZE(HDRP(NEXT_BLKP(bp)));
         PUT(HDRP(bp),PACK(size,0));
         /*Here Attention!!! PUT has already changed the size
         * and the FTRP is calcaulate the footer blook 
         * by the size */
-       PUT(FTRP(bp),PACK(size,0));
+        PUT(FTRP(bp),PACK(size,0));
     }
     /* case Three Only after block is malloced*/
-    if(bef_alloc==0 && aft_alloc==1){
+    if(!bef_alloc && aft_alloc){
         size+=GET_SIZE(FTRP(PREV_BLKP(bp)));
         PUT(FTRP(bp),PACK(size,0));
         PUT(HDRP(PREV_BLKP(bp)),PACK(size,0));
         bp=PREV_BLKP(bp);
     }
     /* case Four both before and after block is Not malloced*/
-    if(bef_alloc==0 && aft_alloc ==0){
-        size+=GET_SIZE(HDRP(NEXT_BLKP(bp)))+GET_SIZE(FTRP(PREV_BLKP(bp)));
+    if(!bef_alloc && !aft_alloc ){
+        size+=GET_SIZE(FTRP(NEXT_BLKP(bp)))+GET_SIZE(HDRP(PREV_BLKP(bp)));
         PUT(HDRP(PREV_BLKP(bp)),PACK(size,0));
         PUT(FTRP(NEXT_BLKP(bp)),PACK(size,0));
         bp=PREV_BLKP(bp);
@@ -125,8 +125,8 @@ static void *find_fit(size_t asize){
     void *bp;
 
     /* first-fit search*/
-    for(bp=heap_listp;GET_SIZE(HDRP(bp))>0;bp=NEXT_BLKP(bp)){
-        if(GET_ALLOC(HDRP(bp))!=NULL && asize<=GET_SIZE(HDRP(bp))){
+    for(bp=heap_listp;GET_SIZE(HDRP(bp))!=0;bp=NEXT_BLKP(bp)){
+        if(!GET_ALLOC(HDRP(bp)) && asize<=GET_SIZE(HDRP(bp))){
             return bp;
         }
     }
@@ -144,8 +144,8 @@ static void place(void *bp,size_t asize){
         PUT(HDRP(bp),PACK(csize-asize,0));
         PUT(FTRP(bp),PACK(csize-asize,0));
     }else{
-        PUT(HDRP(bp),PACK(asize,1));
-        PUT(FTRP(bp),PACK(asize,1));
+        PUT(HDRP(bp),PACK(csize,1));
+        PUT(FTRP(bp),PACK(csize,1));
     }
 }
 
@@ -188,7 +188,7 @@ void *mm_malloc(size_t size)
     if(size<=DSIZE){
         asize=2*DSIZE;
     }else{
-        asize=DSIZE*(((size+(DSIZE)+(DSIZE-1))/DSIZE));
+        asize=DSIZE*((size+(DSIZE)+(DSIZE-1))/DSIZE);
     }
 
     /* Search the free list for a fit */
