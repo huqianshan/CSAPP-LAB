@@ -229,7 +229,8 @@ void *mm_realloc(void *ptr, size_t size)
         return  mm_malloc(size);
     }
     if(size==0){
-        return  mm_free(ptr);
+        mm_free(ptr);
+        return NULL;
     }
     size_t asize;
     if(size<=DSIZE){
@@ -254,12 +255,12 @@ void *mm_realloc(void *ptr, size_t size)
 
         if(!next_alloc && asize<=(next_size+old_size)){
             size_t remain=(next_size+old_size)-asize;
-            PUT(HDRP(ptr),PACK(asize,1))
-            PUT(FTRP(ptr),PACK(asize,1))
+            PUT(HDRP(ptr),PACK(asize,1));
+            PUT(FTRP(ptr),PACK(asize,1));
 
             if(remain>=DSIZE){
                 PUT(HDRP(NEXT_BLKP(ptr)),PACK(remain,0));
-                PUT(FTRP(NEXT_BLKP(ptr)),PACK(remain,0))
+                PUT(FTRP(NEXT_BLKP(ptr)),PACK(remain,0));
             }
 
             return ptr;
