@@ -1,8 +1,8 @@
 #
 # Students' Makefile for the Malloc Lab
 #
-TEAM = bovik
-VERSION = 1
+TEAM = hjl
+VERSION = 2
 HANDINDIR = /afs/cs.cmu.edu/academic/class/15213-f01/malloclab/handin
 
 CC = gcc
