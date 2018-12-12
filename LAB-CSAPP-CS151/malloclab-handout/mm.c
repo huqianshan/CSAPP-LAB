@@ -50,7 +50,7 @@ team_t team = {
 #define  DSIZE 8
 #define CHUNKSIZE (1<<12)
 
-#define MAX(x,y) (((x)>(y))?(x):(y))
+#define MAX(x,y) ((x)>(y)?(x):(y))
 #define  GET(p)        (*(unsigned int*)(p))
 #define  PUT(p,val)    (*(unsigned int*)(p) = (val))
 
@@ -64,7 +64,7 @@ team_t team = {
 #define HDRP(bp) ((char*)(bp)-WSIZE)
 #define FTRP(bp) ((char*)(bp)+GET_SIZE(HDRP(bp))-DSIZE)
 
-#define NEXT_BLKP(bp) ((char*)(bp)+GET_SIZE((HDRP(bp))))
+#define NEXT_BLKP(bp) ((char*)(bp)+GET_SIZE(((char*)(bp)-WSIZE)))
 #define PREV_BLKP(bp) ((char*)(bp)-GET_SIZE(((char*)(bp)-DSIZE)))
 
 static char *heap_listp=0;
@@ -125,7 +125,7 @@ static void *find_fit(size_t asize){
     void *bp;
 
     /* first-fit search*/
-    for(bp=heap_listp;GET_SIZE(HDRP(bp))>0;bp=NEXT_BLKP(bp){
+    for(bp=heap_listp;GET_SIZE(HDRP(bp))>0;bp=NEXT_BLKP(bp)){
         if(GET_ALLOC(HDRP(bp))!=NULL && asize<=GET_SIZE(HDRP(bp))){
             return bp;
         }
@@ -215,6 +215,7 @@ void mm_free(void *ptr)
 
     PUT(HDRP(ptr),PACK(size,0));
     PUT(FTRP(ptr),PACK(size,0));
+    
     coalesce(ptr);
 }
 
@@ -223,20 +224,61 @@ void mm_free(void *ptr)
  */
 void *mm_realloc(void *ptr, size_t size)
 {
-    void *oldptr = ptr;
-    void *newptr;
-    size_t copySize;
+ 
+    if(ptr==NULL){
+        return  mm_malloc(size);
+    }
+    if(size==0){
+        return  mm_free(ptr);
+    }
+    size_t asize;
+    if(size<=DSIZE){
+        asize=2*DSIZE;
+    }else{
+        asize=DSIZE*(((size+(DSIZE)+(DSIZE-1))/DSIZE));
+    }
+
+    size_t old_size=GET_SIZE(HDRP(ptr));
+    if(old_size==asize){
+        return ptr;
+    }else if(old_size>asize){
+        PUT(HDRP(ptr),PACK(asize,1));
+        PUT(FTRP(ptr),PACK(asize,1));
+        
+        PUT(HDRP(NEXT_BLKP(ptr)),PACK(old_size-asize,0));
+        PUT(FTRP(PREV_BLKP(ptr)),PACK(old_size-asize,0));
+    }else if(old_size<asize){
+        /* Next Block can be used*/
+        size_t next_size=GET_SIZE(HDRP(NEXT_BLKP(ptr)));
+        size_t next_alloc=GET_ALLOC(HDRP(NEXT_BLKP(ptr)));
+
+        if(!next_alloc && asize<=(next_size+old_size)){
+            size_t remain=(next_size+old_size)-asize;
+            PUT(HDRP(ptr),PACK(asize,1))
+            PUT(FTRP(ptr),PACK(asize,1))
+
+            if(remain>=DSIZE){
+                PUT(HDRP(NEXT_BLKP(ptr)),PACK(remain,0));
+                PUT(FTRP(NEXT_BLKP(ptr)),PACK(remain,0))
+            }
+
+            return ptr;
+        }else{
+            // malloc newly
+            char *newptr=mm_malloc(asize);
+            if(newptr==NULL){
+                return NULL;
+            }
+            memcpy(newptr,ptr,old_size-DSIZE);
+            mm_free(ptr);
+            return newptr;
+        }
+    }
     
-    newptr = mm_malloc(size);
-    if (newptr == NULL)
-      return NULL;
-    copySize = *(size_t *)((char *)oldptr - SIZE_T_SIZE);
-    if (size < copySize)
-      copySize = size;
-    memcpy(newptr, oldptr, copySize);
-    mm_free(oldptr);
-    return newptr;
+
 }
+
+
 
 
 
