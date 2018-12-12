@@ -8,6 +8,7 @@
  *
  * NOTE TO STUDENTS: Replace this header comment with your own header
  * comment that gives a high level description of your solution.
+ * hjl fucking Uestc's cold on 2018 12 12
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -24,11 +25,11 @@
  ********************************************************/
 team_t team = {
     /* Team name */
-    "ateam",
+    "alone in 615",
     /* First member's full name */
-    "Harry Bovik",
+    "hujinlei",
     /* First member's email address */
-    "bovik@cs.cmu.edu",
+    "1196455147@qq.com",
     /* Second member's full name (leave blank if none) */
     "",
     /* Second member's email address (leave blank if none) */
@@ -48,7 +49,7 @@ team_t team = {
  * mm_init - initialize the malloc package.
  */
 int mm_init(void)
-{
+{   
     return 0;
 }
 
