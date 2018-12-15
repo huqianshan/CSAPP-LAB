@@ -197,6 +197,7 @@ void *mm_malloc(size_t size)
         return bp;
     }
 
+
     /* NO fit found Get more memory and place the block*/
     extendsize=MAX(asize,CHUNKSIZE);
     if((bp=extend_heap(extendsize/WSIZE))==NULL){
@@ -232,6 +233,7 @@ void *mm_realloc(void *ptr, size_t size)
         mm_free(ptr);
         return NULL;
     }
+
     size_t asize;
     if(size<=DSIZE){
         asize=2*DSIZE;
@@ -248,6 +250,7 @@ void *mm_realloc(void *ptr, size_t size)
         
         PUT(HDRP(NEXT_BLKP(ptr)),PACK(old_size-asize,0));
         PUT(FTRP(PREV_BLKP(ptr)),PACK(old_size-asize,0));
+        return ptr;
     }else if(old_size<asize){
         /* Next Block can be used*/
         size_t next_size=GET_SIZE(HDRP(NEXT_BLKP(ptr)));
