@@ -11,7 +11,8 @@ page is home.html (rather than index.html) so that we can view
 the contents of the directory from a browser.
 
 Tiny is neither secure nor complete, but it gives students an
-idea of how a real Web server works. Use for instructional purposes only.
+idea of how a real Web server works. Use for instructional 
+purposes only.
 
 The code compiles and runs cleanly using gcc 2.95.3 
 on a Linux 2.2.20 kernel.
