@@ -17,8 +17,8 @@ MAX_CACHE=15
 
 # Various constants
 HOME_DIR=`pwd`
-PROXY_DIR="./myproxy"
-NOPROXY_DIR="./noproxy"
+PROXY_DIR="./.proxy"
+NOPROXY_DIR="./.noproxy"
 TIMEOUT=5
 MAX_RAND=63000
 PORT_START=1024
@@ -236,7 +236,7 @@ for file in ${BASIC_LIST}
 do
     numRun=`expr $numRun + 1`
     echo "${numRun}: ${file}"
-    #clear_dirs
+    clear_dirs
 
     # Fetch using the proxy
     echo "   Fetching ./tiny/${file} into ${PROXY_DIR} using the proxy"
