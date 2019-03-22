@@ -3,6 +3,8 @@
 /* Recommended max cache and object sizes */
 #define MAX_CACHE_SIZE 1049000
 #define MAX_OBJECT_SIZE 102400
+#define NTHREADS 4
+#define SBUFSIZE 16
 
 /* You won't lose style points for including this 
 long line in your code */
@@ -22,6 +24,9 @@ typedef struct {
     char value[MAXLINE];
 }rq_body;
 
+sbuf_t sbuf;
+static sem_t mutex;
+
 void clienterror(int fd, char *cause, char *errnum, char *shortmsg, char *longmsg);
 char* find_sig(char** buf,char** ptr,char* word,size_t n);
 int parser_and_proxy(int fd);
@@ -31,14 +36,19 @@ int parser_body(char *buf,rq_body *body);
 
 int send_to_server(rq_line rq_head,rq_body *rq_body,int num);
 
+void *thread(void *arg);
+static void init_parser_cnt(void){
+    Sem_init(&mutex, 0, 1);
+}
 
 int main(int argc,char **argv)
 {   
 
-    int listenfd,connfd;
+    int i,listenfd,connfd;
     char hostname[MAXLINE],port[MAXLINE];
     socklen_t clientlen;
     struct sockaddr_storage clientaddr;
+    pthread_t tid;
 
     if(argc!=2){
         fprintf(stderr,"proxy usage: %s <port>\n",argv[0]);
@@ -46,18 +56,35 @@ int main(int argc,char **argv)
     }
     
     listenfd = Open_listenfd(argv[1]);
-    while(1){
+
+    sbuf_init(&sbuf, SBUFSIZE);
+    for (i = 0; i < NTHREADS;i++){
+        Pthread_create(&tid, NULL, thread, NULL);
+    }
+    while (1)
+    {
         clientlen = sizeof(clientaddr);
-        connfd = Accept(listenfd,(SA*)&clientaddr,&clientlen);
-        Getnameinfo((SA *) &clientaddr, clientlen, hostname, MAXLINE, 
+        connfd = Accept(listenfd, (SA *)&clientaddr, &clientlen);
+        Getnameinfo((SA *)&clientaddr, clientlen, hostname, MAXLINE,
                     port, MAXLINE, 0);
         printf("Accepted connection from (%s, %s)\n", hostname, port);
-	    parser_and_proxy(connfd);
-	    Close(connfd);
+        sbuf_insert(&sbuf, connfd);
+        //parser_and_proxy(connfd);
+        
     }
 
     return 0;
 }
+
+void *thread(void *arg){
+    Pthread_detach(pthread_self());
+    while(1){
+        int connfd = sbuf_remove(&sbuf);
+        parser_and_proxy(connfd);
+        Close(connfd);
+    }
+}
+
 /*
  * parser_and_proxy - handle one HTTP  transaction
  * input: client_file_descriptor
@@ -76,7 +103,7 @@ int parser_and_proxy(int client_fd){
     rq_body rq_main[50];
 
     rio_t rio;
-
+   
     bd_num = parser_header(client_fd, &rq_header, rq_main);
     if(bd_num<=0){
         fprintf(stderr, "parser headr fail %d\n",bd_num);
@@ -152,6 +179,7 @@ int parser_header(int fd,rq_line *line,rq_body *body)
     // parser other request key-value
     bd_num = 0;
     Rio_readlineb(&rio,buf,MAXLINE);
+
     while (strcmp(buf, "\r\n"))
     {
         //printf("%s\n", buf);
@@ -213,12 +241,18 @@ int send_to_server(rq_line rq_head,rq_body* rq_main,int num){
 
     // open server's fd
     serverfd = Open_clientfd(rq_head.hostname, rq_head.port);
+
+
+    static pthread_once_t once = PTHREAD_ONCE_INIT;
+    Pthread_once(&once, init_parser_cnt);
     Rio_readinitb(&rio, serverfd);
-    sprintf(buf,"%s %s %s\r\n",rq_head.method,rq_head.path,rq_head.version);
+    P(&mutex);
+
+    sprintf(buf, "%s %s %s\r\n", rq_head.method, rq_head.path, rq_head.version);
 
     buf_ptr = buf + strlen(buf);
     for (int i = 0; i < num; i++)
-    {
+    {   
         rq_body tem = rq_main[i];
         sprintf(buf_ptr, "%s: %s", tem.name, tem.value);
         buf_ptr = buf + strlen(buf);
@@ -226,6 +260,8 @@ int send_to_server(rq_line rq_head,rq_body* rq_main,int num){
     sprintf(buf_ptr, "\r\n");
     printf("\nrequest for server is \n%s\n", buf);
     Rio_writen(serverfd, buf, MAXLINE);
+
+    V(&mutex);
 
     return serverfd;
 }
