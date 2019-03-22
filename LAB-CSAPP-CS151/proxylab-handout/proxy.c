@@ -22,20 +22,15 @@ typedef struct {
     char value[MAXLINE];
 }rq_body;
 
-
-void parser_and_send(int fd);
-int parser_uri(rq_line *line);
-void clienterror(int fd, char *cause, char *errnum, 
-		 char *shortmsg, char *longmsg);
-int parser_header(int fd,rq_line *line,rq_body *body,int *bd_num);
-rq_body parser_body(char *buf);
+void clienterror(int fd, char *cause, char *errnum, char *shortmsg, char *longmsg);
 char* find_sig(char** buf,char** ptr,char* word,size_t n);
+int parser_and_proxy(int fd);
+int parser_uri(rq_line *line);
+int parser_header(int fd,rq_line *line,rq_body *body);
+int parser_body(char *buf,rq_body *body);
+
 int send_to_server(rq_line rq_head,rq_body *rq_body,int num);
 
-void debug(char* buf){
-    printf("\n----------------this is for debug %s--------------\n",buf);
-    printf("\n\n");
-}
 
 int main(int argc,char **argv)
 {   
@@ -57,18 +52,21 @@ int main(int argc,char **argv)
         Getnameinfo((SA *) &clientaddr, clientlen, hostname, MAXLINE, 
                     port, MAXLINE, 0);
         printf("Accepted connection from (%s, %s)\n", hostname, port);
-	    parser_and_send(connfd);
+	    parser_and_proxy(connfd);
 	    Close(connfd);
     }
 
     return 0;
 }
 /*
- * parser - handle one HTTP request/response transaction
+ * parser_and_proxy - handle one HTTP  transaction
+ * input: client_file_descriptor
+ * output: 0 for corrent -1 for some situation
+ * redirect request to server through proxy
  */
 /* $begin parser */
-void parser_and_send(int client_fd){
-    int body_num = 0;
+int parser_and_proxy(int client_fd){
+    int bd_num;
     int total_size,n;
     int server_fd;
 
@@ -79,122 +77,131 @@ void parser_and_send(int client_fd){
 
     rio_t rio;
 
-    int t = parser_header(client_fd, &rq_header, rq_main, &body_num);
-    if(t!=0){
-        printf("parser headr fail \n");
-        return ;
+    bd_num = parser_header(client_fd, &rq_header, rq_main);
+    if(bd_num<=0){
+        fprintf(stderr, "parser headr fail %d\n",bd_num);
+        return -1;
     }
-  
-    if (strcasecmp(rq_header.method, "GET")) {                     //line:netp:doit:beginrequesterr
+    
+    // only deal with "GET"
+    if (strcasecmp(rq_header.method, "GET")) {                    
         clienterror(client_fd, rq_header.method, "501", "Not Implemented",
                     "Tiny does not implement this method");
-        return;
-    }                                                    //line:netp:doit:endrequesterr
+        return -2;
+    }                                                    
 
-    total_size = 0;
-    server_fd = send_to_server(rq_header, rq_main, body_num);
-    
+    server_fd = send_to_server(rq_header, rq_main, bd_num);
+    if(server_fd<=0){
+        fprintf(stderr, "some error during aimed server \n");
+        return -3;
+    }
+
     // send to clientfd
-    Rio_readinitb(&rio, server_fd);
-    
+    total_size = 0;
+    Rio_readinitb(&rio, server_fd);   
     while((n=Rio_readlineb(&rio,buf,MAXLINE))){
-        //printf("receiverd %d \n", n);
-        printf("%s", buf);
         Rio_writen(client_fd, buf,n);
         total_size += n;
     }
-    printf("total is %d\n", total_size);
+    printf("response total size is %d byte\n", total_size);
 
     Close(server_fd);
+    return 0;
 }
 
 /*
-: parser_header
-:  parser to get http rquest body
+* parser_header -- parser to get http rquest body
+* input; client_file_descriptor, request_information,
+* output : infomation number
 */
-int parser_header(int fd,rq_line *line,rq_body *body,int *bd_num)
+
+int parser_header(int fd,rq_line *line,rq_body *body)
 {
     rio_t rio;
     char buf[MAXBUF];
+    int bd_num;
 
     Rio_readinitb(&rio,fd);
     if(Rio_readlineb(&rio,buf,MAXLINE)==0){
+        fprintf(stderr, "can't read request information  in %d \n", fd);
         return -3;
     }
-    printf("raw request header : %s\n",buf);
-    // spilt into three parts
-    sscanf(buf,"%s %s %s",line->method,line->uri,line->version);
-    
-    if (strlen(line->uri) <= 0)
-    {
-        printf("parsrer headr to uri faile \n");
-        return -1;
-    }
+    printf("raw request header : \n%s",buf);
 
-    int n;
-    if((n = parser_uri(line))<0){
-        printf("uri parser faile\n");
+    // spilt into three parts
+    int st=sscanf(buf,"%s %s %s",line->method,line->uri,line->version);
+    if(st<=0||strlen(line->method)==0||strlen(line->uri)==0||strlen(line->version)==0){
+        fprintf(stderr, "can't parser request information in \n%s \n",buf);
         return -2;
+    }
+    
+    // get host and port
+    int n;
+    if((n = parser_uri(line)) <0){
+        fprintf(stderr, "parser host or port or path in uri[%s] false\n",line->uri);
+        return -1;
     };
 
     // forward http/1.1 to http/1.0
     if(strcmp(line->version,"HTTP/1.1")==0){
         strcpy(line->version,"HTTP/1.0");
         strcpy(line->version+strlen("HTTP/1.1"),"\r\n");
+        printf("replace HTTP/1.1 to HTTP/1.0\n");
     }
 
     // parser other request key-value
-    *bd_num = 0;
+    bd_num = 0;
     Rio_readlineb(&rio,buf,MAXLINE);
-    while(strcmp(buf,"\r\n")){
-        body[*(bd_num)] = parser_body(buf);
+    while (strcmp(buf, "\r\n"))
+    {
+        //printf("%s\n", buf);
+        int pt = parser_body(buf, &body[bd_num++]);
+        if(pt!=0){
+            fprintf(stderr, "parser body fail %s\n", buf);
+        }
         Rio_readlineb(&rio,buf,MAXLINE);
-        printf("read from client %s \n", buf);
-        *(bd_num)+=1;
     }
-    printf("body has %d \n", *bd_num);
-    return 0;
+
+    return bd_num;
 }
 
 char* find_sig(char** buf,char** ptr,char* word,size_t n){
     *buf = *ptr + n;
     *ptr = strstr(*buf,word);
     if(*ptr==NULL){
-        printf("parser url error no port mayebe\n");
-        exit(1);
+        fprintf(stderr, "can't in %s find %s\n", *buf, word);
+        return "\0";
     }
     **ptr='\0';
-    printf("debug url:%s \n", *buf);
     return *buf;
 }
 
 int parser_uri(rq_line *line){
     char *url=line->uri;
     char *ptr = url;
-    //printf("debug url:%s \n", url);
 
-    strcpy(line->hostname,find_sig(&url,&ptr,":",strlen("http://")));
-    
-    strcpy(line->port,find_sig(&url,&ptr,"/",1));
-    //strcpy(line->path,find_sig(url,ptr,"\0",1));
-    strcpy(line->path, "/");
-    strcpy(line->path+1, ptr + 1);
+    // only deal with "http://hostname:port/path"
+    strcpy(line->hostname, find_sig(&url, &ptr, ":", strlen("http://"))); // get host
+    strcpy(line->port,find_sig(&url,&ptr,"/",1));                         // get port
+    strcpy(line->path, "/");                                              // add "/"
+    strcpy(line->path+1, ptr + 1);                                        // get path
     printf("header parser host:%s port:%s path : %s\n",
            line->hostname, line->port, line->path);
     return 0;
 }
 
-rq_body parser_body(char *buf){
-    rq_body body;
+int  parser_body(char *buf,rq_body* body){
+
     char *ptr = strstr(buf,":");
     if(ptr==NULL){
         fprintf(stderr, "Error: invalid body: %s\n", buf);
-        exit(0);
+        return -1;
     }
     *ptr= '\0';
-    strcpy(body.name,buf);
-    strcpy(body.value,ptr+2);
-    return body;
+    strcpy(body->name,buf);
+    strcpy(body->value, ptr + 2);
+    strcpy(body->value + strlen(body->value), "\r\n");
+    return 0;
 }
 /*
    send rq_head to  hostname and port
@@ -204,15 +211,12 @@ int send_to_server(rq_line rq_head,rq_body* rq_main,int num){
     char buf[MAXLINE],*buf_ptr = buf;
     rio_t rio;
 
+    // open server's fd
     serverfd = Open_clientfd(rq_head.hostname, rq_head.port);
     Rio_readinitb(&rio, serverfd);
     sprintf(buf,"%s %s %s\r\n",rq_head.method,rq_head.path,rq_head.version);
-    
-    debug("send to server");
-    printf("\nrq_line is %s\n", buf);
 
     buf_ptr = buf + strlen(buf);
-
     for (int i = 0; i < num; i++)
     {
         rq_body tem = rq_main[i];
@@ -220,7 +224,7 @@ int send_to_server(rq_line rq_head,rq_body* rq_main,int num){
         buf_ptr = buf + strlen(buf);
     }
     sprintf(buf_ptr, "\r\n");
-    printf("buf is \n%s", buf);
+    printf("\nrequest for server is \n%s\n", buf);
     Rio_writen(serverfd, buf, MAXLINE);
 
     return serverfd;
