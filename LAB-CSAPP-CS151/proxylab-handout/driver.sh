@@ -405,5 +405,6 @@ totalScore=`expr ${basicScore} + ${cacheScore} + ${concurrencyScore}`
 maxScore=`expr ${MAX_BASIC} + ${MAX_CACHE} + ${MAX_CONCURRENCY}`
 echo ""
 echo "totalScore: ${totalScore}/${maxScore}"
+clear_dirs
 exit
 

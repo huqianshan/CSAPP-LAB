@@ -1,8 +1,8 @@
-#include <stdio.h>
 #include "csapp.h"
 /* Recommended max cache and object sizes */
 #define MAX_CACHE_SIZE 1049000
 #define MAX_OBJECT_SIZE 102400
+#define CACHE_NUMBER 10
 #define NTHREADS 4
 #define SBUFSIZE 16
 
@@ -24,8 +24,21 @@ typedef struct {
     char value[MAXLINE];
 }rq_body;
 
+typedef struct{
+    char *name;
+    char *objest;
+} Cache_line;
+
+typedef struct{
+    int cnt;
+    Cache_line *objs;
+} Cache;
+
 sbuf_t sbuf;
+int readcnt;
 static sem_t mutex;
+static sem_t cache_mutex,W;
+Cache cache;
 
 void clienterror(int fd, char *cause, char *errnum, char *shortmsg, char *longmsg);
 char* find_sig(char** buf,char** ptr,char* word,size_t n);
@@ -40,6 +53,10 @@ void *thread(void *arg);
 static void init_parser_cnt(void){
     Sem_init(&mutex, 0, 1);
 }
+void init_cache();
+
+int reader(int fd, char *url);
+int writer(char *buf, char *url);
 
 int main(int argc,char **argv)
 {   
@@ -54,7 +71,8 @@ int main(int argc,char **argv)
         fprintf(stderr,"proxy usage: %s <port>\n",argv[0]);
         exit(1);
     }
-    
+
+    init_cache();
     listenfd = Open_listenfd(argv[1]);
 
     sbuf_init(&sbuf, SBUFSIZE);
@@ -69,10 +87,8 @@ int main(int argc,char **argv)
                     port, MAXLINE, 0);
         printf("Accepted connection from (%s, %s)\n", hostname, port);
         sbuf_insert(&sbuf, connfd);
-        //parser_and_proxy(connfd);
-        
+        //parser_and_proxy(connfd);        
     }
-
     return 0;
 }
 
@@ -97,7 +113,7 @@ int parser_and_proxy(int client_fd){
     int total_size,n;
     int server_fd;
 
-    char buf[MAXLINE];
+    char buf[MAXLINE],url[MAXLINE],obj_buf[MAX_OBJECT_SIZE];
 
     rq_line rq_header;
     rq_body rq_main[50];
@@ -115,7 +131,19 @@ int parser_and_proxy(int client_fd){
         clienterror(client_fd, rq_header.method, "501", "Not Implemented",
                     "Tiny does not implement this method");
         return -2;
-    }                                                    
+    }
+
+    strcpy(url, rq_header.hostname);
+    strcpy(url + strlen(url), rq_header.path);
+    printf("debug url for cache is %s\n", url);
+    if (reader(client_fd, url))
+    {
+        //fprintf(stdout, "%s from cache\n", url);
+        //fflush(stdout);
+        printf("url %s from cache\n", url);
+        return 0;
+    }
+
 
     server_fd = send_to_server(rq_header, rq_main, bd_num);
     if(server_fd<=0){
@@ -128,9 +156,16 @@ int parser_and_proxy(int client_fd){
     Rio_readinitb(&rio, server_fd);   
     while((n=Rio_readlineb(&rio,buf,MAXLINE))){
         Rio_writen(client_fd, buf,n);
+        strcpy(obj_buf + total_size, buf);
         total_size += n;
     }
     printf("response total size is %d byte\n", total_size);
+
+
+    if(total_size<MAX_OBJECT_SIZE){
+        writer(obj_buf, url);
+        printf("%s in cache \n",url);
+    }
 
     Close(server_fd);
     return 0;
@@ -264,4 +299,54 @@ int send_to_server(rq_line rq_head,rq_body* rq_main,int num){
     V(&mutex);
 
     return serverfd;
+}
+
+void init_cache(){
+    Sem_init(&cache_mutex, 0, 1);
+    Sem_init(&W, 0, 1);
+    readcnt = 0;
+
+    cache.objs = (Cache_line *)Malloc(sizeof(Cache_line) * CACHE_NUMBER);
+    cache.cnt = 0;
+    for (int i = 0; i < CACHE_NUMBER;i++){
+        cache.objs[i].name = Malloc(sizeof(char) * MAXLINE);
+        cache.objs[i].objest = Malloc(sizeof(char) * MAX_OBJECT_SIZE);
+    }
+}
+
+int reader(int fd,char *url){
+    int in_cache = 0;
+    P(&cache_mutex);
+    readcnt++;
+    if(readcnt==1){
+        P(&W);
+    }
+    V(&cache_mutex);
+
+    for (int i = 0; i <CACHE_NUMBER;i++){
+        if(strcmp(cache.objs[i].name,url)==0){
+            Rio_writen(fd, cache.objs[i].objest, MAX_OBJECT_SIZE);
+            in_cache = 1;
+            break;
+        }
+    }
+
+    P(&cache_mutex);
+    readcnt--;
+    if(readcnt==0){
+        V(&W);
+    }
+    V(&cache_mutex);
+    return in_cache;
+}
+
+int writer(char *buf,char *url){
+
+    P(&W);
+    strcpy(cache.objs[cache.cnt].name, url);
+    strcpy(cache.objs[cache.cnt].objest, buf);
+    cache.cnt++;
+    V(&W);
+    return 1;
+    
 }
