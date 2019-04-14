@@ -25,7 +25,7 @@ static char *heap_listp;
 void mem_init(void)
 {
     /* allocate the storage we will use to model the available VM */
-    if ((mem_start_brk = (char *)malloc(MAX_HEAP)) == NULL) {
+    if ((mem_start_brk = (char *)sbrk(MAX_HEAP)) == NULL) {
 	fprintf(stderr, "mem_init_vm: malloc error\n");
 	exit(1);
     }

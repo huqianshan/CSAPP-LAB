@@ -1,4 +1,5 @@
 /*
+ * 隐式链表　＋　首次分配器　＋　sbrk 　
  * mm-naive.c - The fastest, least memory-efficient malloc package.
  * 
  * In this naive approach, a block is allocated by simply incrementing
@@ -8,7 +9,7 @@
  *
  * NOTE TO STUDENTS: Replace this header comment with your own header
  * comment that gives a high level description of your solution.
- * hjl fucking Uestc's cold on 2018 12 12
+ * 
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -25,11 +26,11 @@
  ********************************************************/
 team_t team = {
     /* Team name */
-    "alone in 615",
+    "Basic",
     /* First member's full name */
-    "hujinlei",
-    /* First member's email address */
-    "1196455147@qq.com",
+    "",
+    /* First member's email address */d
+    "",
     /* Second member's full name (leave blank if none) */
     "",
     /* Second member's email address (leave blank if none) */
