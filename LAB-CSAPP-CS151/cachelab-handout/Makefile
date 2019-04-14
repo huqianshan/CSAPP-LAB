@@ -24,8 +24,8 @@ trans.o: trans.c
 #
 # Clean the src dirctory
 #
-clean:
-	rm -rf *.o
+clean:d
+	rm -rf *.od
 	rm -f *.tar
 	rm -f csim
 	rm -f test-trans tracegen
