@@ -42,8 +42,33 @@ Finished:
     - 进程控制
       - 回收子进程 僵尸进程 `fork`和` execve`
     - 信号 `Sigal`
-   - 第七章 虚拟内存
-   - 第八章 动态分配
+  - 第七章 虚拟内存
+  - 第八章 动态分配
+  - 第九章 系统级I/O 
+    - Everything is File
+    - 描述符表、文件表、v-node表
+    - 标准I/O与系统级I/O
+  - 第十章 UNIX网络编程
+    - Tiny Server
+  - 第十一章 并发编程
+    - 并发类型
+      - 基于进程的并发
+      - 基于线程的并发
+      - 基于I/O事务的并发
+    - 并发的要求
+      - 互斥
+      - 同步
+    - 调度共享资源
+      - 生产者、消费者模型
+      - 读、写模型（互斥）
+      - 理发店模型
+    - 并发带来的后果
+      - 死锁、活锁
+      - 竞争
+      - 饥饿
+      - 不安全线程
+      - 可重入性
+    - 信号量 `P V`操作
 
 - LAB 
   - [x] CPP Lab (C Programming Lab: Assessing Your C Programming Skills)
@@ -51,5 +76,6 @@ Finished:
   - [x] Bomb Lab (4/6)
   - [x] Cache Lab (9/10)
   - [x] Shell Lab (10/10)
-  - [x] Malloc Lab (begin)
+  - [x] Malloc Lab (10/10)
+  - [x] Proxy Lab  (7/7)
 
