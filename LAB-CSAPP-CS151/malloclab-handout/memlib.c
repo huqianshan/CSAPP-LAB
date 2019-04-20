@@ -1,4 +1,4 @@
-/*
+/* Explicited Allocator By mmap or SBRK
  * memlib.c - a module that simulates the memory system.  Needed because it 
  *            allows us to interleave calls from the student's malloc package 
  *            with the system's malloc package in libc.
@@ -31,8 +31,11 @@ void mem_init(void)
 {
     /* allocate the storage we will use to model the available VM */
     #ifdef MMAP
-        mem_start_brk = mmap(NULL, MAX_HEAP, PROT_EXEC | PROT_WRITE,
-                         MAP_ANON | MAP_SHARED, -1, 0);
+        mem_start_brk = mmap(NULL, 
+                            MAX_HEAP, 
+                            PROT_EXEC | PROT_WRITE,
+                            MAP_ANON | MAP_SHARED, 
+                            -1, 0);
         if(mem_start_brk==MAP_FAILED){  
             char *mesg = strerror(errno);
             fprintf(stderr, mesg);
@@ -92,6 +95,7 @@ void *mem_sbrk(int incr)
     }
     mem_brk += incr;
     return (void *)old_brk;
+
 }
 
 /*

@@ -33,8 +33,8 @@
   "binary2-bal.rep",\
   "realloc-bal.rep",\
   "short1-bal.rep",\
-  "short2-bal.rep"
-  //"realloc2-bal.rep",
+  "short2-bal.rep",\
+  "realloc2-bal.rep"
 /*
  * This constant gives the estimated performance of the libc malloc
  * package using our traces on some reference system, typically the
@@ -44,7 +44,7 @@
  * to their score.  This deters students from building extremely fast,
  * but extremely stupid malloc packages.
  */
-#define AVG_LIBC_THRUPUT      600E3  /* 600 Kops/sec */
+#define AVG_LIBC_THRUPUT      7000E3  /* 600 Kops/sec */
 
  /* 
   * This constant determines the contributions of space utilization
