@@ -19,16 +19,33 @@ static char *mem_start_brk;  /* points to first byte of heap */
 static char *mem_brk;        /* points to last byte of heap */
 static char *mem_max_addr;   /* largest legal heap address */ 
 static char *heap_listp;    
+
+/* two ways to get free block in Virtual Memory*/
+#define MMAP
+//#define SBRK
+
 /* 
  * mem_init - initialize the memory system model
  */
 void mem_init(void)
 {
     /* allocate the storage we will use to model the available VM */
-    if ((mem_start_brk = (char *)sbrk(MAX_HEAP)) == NULL) {
-	fprintf(stderr, "mem_init_vm: malloc error\n");
-	exit(1);
+    #ifdef MMAP
+        mem_start_brk = mmap(NULL, MAX_HEAP, PROT_EXEC | PROT_WRITE,
+                         MAP_ANON | MAP_SHARED, -1, 0);
+        if(mem_start_brk==MAP_FAILED){  
+            char *mesg = strerror(errno);
+            fprintf(stderr, mesg);
+            exit(1);
+        }
+#endif
+
+    #ifdef SBRK
+     if ((mem_start_brk = (char *)sbrk(MAX_HEAP)) == NULL) {
+	    fprintf(stderr, "mem_init_vm: malloc error\n");
+	    exit(1);
     }
+    #endif
 
     mem_max_addr = mem_start_brk + MAX_HEAP;  /* max legal heap address */
     mem_brk = mem_start_brk;                  /* heap is empty initially */
@@ -38,8 +55,17 @@ void mem_init(void)
  * mem_deinit - free the storage used by the memory system model
  */
 void mem_deinit(void)
-{
-    free(mem_start_brk);
+{   
+    #ifdef SBRK
+        free(mem_start_brk);
+    #endif
+    #ifdef MMAP
+        if(munmap(mem_start_brk,MAX_HEAP)!=0){
+            char *mesg = strerror(errno);
+            fprintf(stderr, mesg);
+            exit(1);
+        }
+    #endif
 }
 
 /*

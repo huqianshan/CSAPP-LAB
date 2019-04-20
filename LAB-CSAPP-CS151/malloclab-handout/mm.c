@@ -68,18 +68,24 @@ team_t team = {
 #define NEXT_BLKP(bp) ((char*)(bp)+GET_SIZE(((char*)(bp)-WSIZE)))
 #define PREV_BLKP(bp) ((char*)(bp)-GET_SIZE(((char*)(bp)-DSIZE)))
 
+static void *coalesce(void *bp);
 /* select allocate and coalesce strategy  
  * allocate:FIRST_FIT,NEXT_FIT and BEST_FIT;
  * coalesce:IMM_COAL and DEL_COAL
  */
+
 //#define FIRST_FIT
-#define BEST_FIT
+//#define BEST_FIT
+#define NEXT_FIT
+
 #define IMM_COAL
+//#define DEL_COAL
+
+
 static char *heap_listp=0;
 
 #ifdef NEXT_FIT
 static char *rover;
-
 #endif
 
 #ifdef DEL_COAL
@@ -88,7 +94,7 @@ static void delay_coalesce(){
     size_t size;
     while((size = GET_SIZE(HDRP(bp)))!=0){
         if(!GET_ALLOC(HDRP(bp))){
-            bp = coalesce(bp);
+            bp = (char*)coalesce(bp);
         }
         bp = NEXT_BLKP(bp);
     }
