@@ -18,7 +18,7 @@
 static char *mem_start_brk; /* points to first byte of heap */
 static char *mem_brk;       /* points to last byte of heap */
 static char *mem_max_addr;  /* largest legal heap address */
-static char *heap_listp;
+
 
 /* two ways to get free block in Virtual Memory*/
 #define MMAP
@@ -39,7 +39,7 @@ void mem_init(void)
     if (mem_start_brk == MAP_FAILED)
     {
         char *mesg = strerror(errno);
-        fprintf(stderr, mesg);
+        fprintf(stderr,"%s",mesg);
         exit(1);
     }
 #endif
@@ -68,7 +68,7 @@ void mem_deinit(void)
     if (munmap(mem_start_brk, MAX_HEAP) != 0)
     {
         char *mesg = strerror(errno);
-        fprintf(stderr, mesg);
+        fprintf(stderr,"%s",mesg);
         exit(1);
     }
 #endif

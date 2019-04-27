@@ -1,5 +1,5 @@
 /*
- * segregate Explicit Free Lists + Segregated Free Lists + Segregated Fits 
+ * Segregated Free Lists
  * 
  * mm.c - The fastest, least memory-efficient malloc package.
  * 
@@ -37,7 +37,7 @@ team_t team = {
     /* Second member's email address (leave blank if none) */
     ""};
 
-    /* 向上进行对齐 */
+/* 向上进行对齐 */
 #define ALIGNMENT 8
 #define ALIGN(size) ((((size) + (ALIGNMENT-1)) / (ALIGNMENT)) * (ALIGNMENT))
 
@@ -48,7 +48,7 @@ team_t team = {
 #define INITCHUNKSIZE (1<<6)
 #define CHUNKSIZE (1<<12)
 
-#define LISTMAX     16
+#define LISTMAX     20
 
 #define MAX(x, y) ((x) > (y) ? (x) : (y))
 #define MIN(x, y) ((x) < (y) ? (x) : (y))
@@ -58,8 +58,6 @@ team_t team = {
 /* 下面对指针所在的内存赋值时要注意类型转换，否则会有警告 */
 #define GET(p)            (*(unsigned int *)(p))
 #define PUT(p, val)       (*(unsigned int *)(p) = (val))
-
-#define SET_PTR(p, ptr) (*(unsigned int *)(p) = (unsigned int)(ptr))
 
 #define GET_SIZE(p)  (GET(p) & ~0x7)
 #define GET_ALLOC(p) (GET(p) & 0x1)
@@ -75,15 +73,57 @@ team_t team = {
 
 #define PRED(ptr) (*(char **)(ptr))
 #define SUCC(ptr) (*(char **)(SUCC_PTR(ptr)))
-
+#define SET_PTR(p, ptr) (*(unsigned int *)(p) = (unsigned int)(ptr))
 
 /* 分离空闲表 */
 void *segregated_free_lists[LISTMAX];
 
+///////////////////////////////// Block information /////////////////////////////////////////////////////////
+/*
+ 
+A   : Allocated? (1: true, 0:false)
+RA  : Reallocation tag (1: true, 0:false)
+ 
+ < Allocated Block >
+ 
+ 
+             31 30 29 28 27 26 25 24 23 22 21 20 19 18 17 16 15 14 13 12 11 10  9  8  7  6  5  4  3  2  1  0
+            +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+ Header :   |                              size of the block                                       |  |  | A|
+    bp ---> +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+            |                                                                                               |
+            |                                                                                               |
+            .                              Payload and padding                                              .
+            .                                                                                               .
+            .                                                                                               .
+            +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+ Footer :   |                              size of the block                                       |     | A|
+            +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+ 
+ 
+ < Free block >
+ 
+             31 30 29 28 27 26 25 24 23 22 21 20 19 18 17 16 15 14 13 12 11 10  9  8  7  6  5  4  3  2  1  0
+            +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+ Header :   |                              size of the block                                       |  |RA| A|
+    bp ---> +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+            |                        pointer to its predecessor in Segregated list                          |
+bp+WSIZE--> +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+            |                        pointer to its successor in Segregated list                            |
+            +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+            .                                                                                               .
+            .                                                                                               .
+            .                                                                                               .
+            +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+ Footer :   |                              size of the block                                       |     | A|
+            +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
+ 
+ 
+*/
+///////////////////////////////// End of Block information /////////////////////////////////////////////////////////
 
 
-
-/* 扩展推 */
+/* 扩展 heap */
 static void *extend_heap(size_t size);
 /* 合并相邻的Free block */
 static void *coalesce(void *ptr);
@@ -94,9 +134,7 @@ static void insert_node(void *ptr, size_t size);
 /* 将ptr所指向的块从分离空闲表中删除 */
 static void delete_node(void *ptr);
 
-/*
-helper funciton
-*/
+/*helper funciton*/
 
 static void *extend_heap(size_t size)
 {
@@ -310,7 +348,7 @@ static void *place(void *ptr, size_t size)
 
     *  这样即使我们有很多free的大块可以使用，但是由于他们不是连续的，我们不能将它们合并，如果下一次来了一个大小为B+1的allocate请求
     *  我们就还需要重新去找一块Free块
-    *  与此相反，如果我们根据allocate块的大小将小的块放在连续的地方，将达到开放在连续的地方：
+    *  与此相反，如果我们根据allocate块的大小将小的块放在连续的地方，将达到在连续的地方：
 
  s  s  s  s  s  s      B            B           B
 +--+--+--+--+--+--+----------+------------+-----------+
@@ -332,7 +370,6 @@ static void *place(void *ptr, size_t size)
         insert_node(ptr, remainder);
         return NEXT_BLKP(ptr);
     }
-
     else
     {
         PUT(HDRP(ptr), PACK(size, 1));
