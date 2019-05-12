@@ -5,7 +5,7 @@ TEAM = Basic
 
 
 CC = gcc
-CFLAGS = -Wall  -m32
+CFLAGS = -g -O0 -Wall  -m32
 
 OBJS = mdriver.o mm.o memlib.o fsecs.o fcyc.o clock.o ftimer.o 
 

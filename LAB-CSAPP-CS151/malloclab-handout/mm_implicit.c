@@ -19,7 +19,7 @@
 
 #include "mm.h"
 #include "memlib.h"
-#include <pthread.h>
+
 /*********************************************************
  * NOTE TO STUDENTS: Before you do anything else, please
  * provide your team information in the following struct.
@@ -35,7 +35,7 @@ team_t team = {
     "",
     /* Second member's email address (leave blank if none) */
     ""};
-static pthread_mutex_t lock;
+
 /* single word (4) or double word (8) alignment */
 #define ALIGNMENT 8
 
@@ -70,13 +70,12 @@ static pthread_mutex_t lock;
  * allocate:FIRST_FIT,NEXT_FIT and BEST_FIT;
  * coalesce:IMM_COAL and DEL_COAL
  */
-
-#define FIRST_FIT
-//#define BEST_FIT
+//#define FIRST_FIT 
 //#define NEXT_FIT
+ #define BEST_FIT
 
-#define IMM_COAL
-//#define DEL_COAL
+//#define IMM_COAL
+#define DEL_COAL
 
 static char *heap_listp = 0;
 
@@ -197,43 +196,38 @@ static void *find_fit(size_t asize)
 
     return NULL; /* no fit found */
 
-#else
+#elif defined BEST_FIT
     /* best-fit search */
     char *bp = heap_listp;
     size_t size;
-    char *best = NULL;
-    size_t minsize = 0;
-
-    while ((size = GET_SIZE(HDRP(bp))) != 0)
-    {
-        if (size >= asize && !GET_ALLOC(HDRP(bp)) && (!minsize || minsize > size))
-        {
-            best = bp;
-            minsize = size;
+    char *best=NULL;
+    size_t minsize=0;
+    while((size = GET_SIZE(HDRP(bp))) != 0){
+        if(size>=asize&&!GET_ALLOC(HDRP(bp))&&(!minsize||minsize > size)){
+            best=bp;
+            minsize=size;
         }
         bp = NEXT_BLKP(bp);
     }
     return best;
-
 #endif
 }
 
 static void place(void *bp, size_t asize)
 {
-    size_t csize = GET_SIZE(HDRP(bp));
+    size_t newsize = GET_SIZE(HDRP(bp)) - asize;
 
-    if ((csize - asize) >= (2 * DSIZE))
+    if (newsize >= (2 * DSIZE))
     {
         PUT(HDRP(bp), PACK(asize, 1));
         PUT(FTRP(bp), PACK(asize, 1));
-        bp = NEXT_BLKP(bp);
-        PUT(HDRP(bp), PACK(csize - asize, 0));
-        PUT(FTRP(bp), PACK(csize - asize, 0));
+        PUT(HDRP(NEXT_BLKP(bp)), PACK(newsize, 0));
+        PUT(FTRP(NEXT_BLKP(bp)), PACK(newsize, 0));
     }
     else
     {
-        PUT(HDRP(bp), PACK(csize, 1));
-        PUT(FTRP(bp), PACK(csize, 1));
+        PUT(HDRP(bp), PACK(GET_SIZE(HDRP(bp)), 1));
+        PUT(FTRP(bp), PACK(GET_SIZE(HDRP(bp)), 1));
     }
 }
 
@@ -289,11 +283,10 @@ void *mm_malloc(size_t size)
      * select delay coalesce strategy 
      * coalesce free space per malloc
      */
+
 #ifdef DEL_COAL
     delay_coalesce();
 #endif
-
-    /* Search the free list for a fit */
     if ((bp = find_fit(asize)) != NULL)
     {
         place(bp, asize);
@@ -325,89 +318,49 @@ void mm_free(void *ptr)
 #endif
 }
 
-
-void *pp_malloc(size_t size){
-    pthread_mutex_lock(&lock);
-    void *addr = mm_malloc(size);
-    pthread_mutex_unlock(&lock);
-    return addr;
-}
-
-void pp_free(void* ptr){
-    pthread_mutex_lock(&lock);
-    mm_free(ptr);
-    pthread_mutex_unlock(&lock);
-}
-
 /*
  * mm_realloc - Implemented simply in terms of mm_malloc and mm_free
  */
 void *mm_realloc(void *ptr, size_t size)
 {
-
-    if (ptr == NULL)
-    {
+    if(ptr == NULL){
         return mm_malloc(size);
     }
-    if (size == 0)
-    {
+    if(size == 0){
         mm_free(ptr);
         return NULL;
     }
 
     size_t asize;
-    if (size <= DSIZE)
-    {
-        asize = 2 * DSIZE;
-    }
-    else
-    {
-        asize = DSIZE * (((size + (DSIZE) + (DSIZE - 1)) / DSIZE));
-    }
+    if(size <= DSIZE) asize  = 2 * DSIZE;
+    else asize = DSIZE * ((size + (DSIZE) + (DSIZE - 1))/DSIZE);
 
-    size_t old_size = GET_SIZE(HDRP(ptr));
-    if (old_size == asize)
-    {
-        return ptr;
-    }
-    else if (old_size > asize)
-    {
+    size_t oldsize = GET_SIZE(HDRP(ptr));
+    if(oldsize == asize) return ptr;
+    else if(oldsize > asize){
         PUT(HDRP(ptr), PACK(asize, 1));
         PUT(FTRP(ptr), PACK(asize, 1));
-
-        PUT(HDRP(NEXT_BLKP(ptr)), PACK(old_size - asize, 0));
-        PUT(FTRP(PREV_BLKP(ptr)), PACK(old_size - asize, 0));
+        PUT(HDRP(NEXT_BLKP(ptr)), PACK(oldsize - asize, 0));
+        PUT(FTRP(NEXT_BLKP(ptr)), PACK(oldsize - asize, 0));
+        
         return ptr;
     }
-    else if (old_size < asize)
-    {
-        /* Next Block can be used*/
-        size_t next_size = GET_SIZE(HDRP(NEXT_BLKP(ptr)));
+    else{
         size_t next_alloc = GET_ALLOC(HDRP(NEXT_BLKP(ptr)));
-
-        if (!next_alloc && asize <= (next_size + old_size))
-        {
-            size_t remain = (next_size + old_size) - asize;
+        if(!next_alloc && GET_SIZE(HDRP(NEXT_BLKP(ptr))) + oldsize >= asize) {
+            size_t last = GET_SIZE(HDRP(NEXT_BLKP(ptr))) + oldsize - asize;
             PUT(HDRP(ptr), PACK(asize, 1));
             PUT(FTRP(ptr), PACK(asize, 1));
-
-            if (remain >= DSIZE)
-            {
-                PUT(HDRP(NEXT_BLKP(ptr)), PACK(remain, 0));
-                PUT(FTRP(NEXT_BLKP(ptr)), PACK(remain, 0));
+            if(last >= DSIZE){
+                PUT(HDRP(NEXT_BLKP(ptr)), PACK(last, 0));
+                PUT(FTRP(NEXT_BLKP(ptr)), PACK(last, 0));
             }
-
             return ptr;
         }
-        else
-        {
-            // malloc newly
+        else{
             char *newptr = mm_malloc(asize);
-            if (newptr == NULL)
-            {
-                return NULL;
-            }
-            memcpy(newptr, ptr, old_size - DSIZE);
+            if(newptr == NULL) return NULL;
+            memcpy(newptr, ptr, oldsize - DSIZE);
             mm_free(ptr);
             return newptr;
         }

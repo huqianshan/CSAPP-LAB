@@ -1,36 +1,85 @@
-Team Name:Ganchengyu
-Member 1 :gan:2016060203
+Team Name:Hu Jinlei
+Member 1 :Zhang Yongsheng:Gan Chengyu
+Member 2 :Gao Zhangrun:Yuan Yulin
 Using default tracefiles in ./traces/
 Measuring performance with the interval timer.
 
+Testing libc malloc
+Reading tracefile: amptjp-bal.rep
+Checking libc malloc for correctness, and performance.
+Reading tracefile: cccp-bal.rep
+Checking libc malloc for correctness, and performance.
+Reading tracefile: cp-decl-bal.rep
+Checking libc malloc for correctness, and performance.
+Reading tracefile: expr-bal.rep
+Checking libc malloc for correctness, and performance.
+Reading tracefile: coalescing-bal.rep
+Checking libc malloc for correctness, and performance.
+Reading tracefile: random-bal.rep
+Checking libc malloc for correctness, and performance.
+Reading tracefile: random2-bal.rep
+Checking libc malloc for correctness, and performance.
+Reading tracefile: binary-bal.rep
+Checking libc malloc for correctness, and performance.
+Reading tracefile: binary2-bal.rep
+Checking libc malloc for correctness, and performance.
+Reading tracefile: realloc-bal.rep
+Checking libc malloc for correctness, and performance.
+Reading tracefile: realloc2-bal.rep
+Checking libc malloc for correctness, and performance.
+
 Results for libc malloc:
 trace  valid  util     ops      secs Kops/s
- 0       yes    0%    5694  0.001138   5003
- 1       yes    0%    5848  0.000977   5988
- 2       yes    0%    6648  0.002197   3026
- 3       yes    0%    5380  0.001914   2810
- 4       yes    0%   14400  0.000336  42870
- 5       yes    0%    4800  0.002702   1777
- 6       yes    0%    4800  0.002428   1977
- 7       yes    0%   12000  0.001181  10160
- 8       yes    0%   24000  0.000991  24220
- 9       yes    0%   14401  0.000563  25574
-10       yes    0%   14401  0.000272  52887
-Total           0%  112372  0.014699   7645
+ 0       yes    0%    5694  0.001006   5662
+ 1       yes    0%    5848  0.000915   6393
+ 2       yes    0%    6648  0.001450   4585
+ 3       yes    0%    5380  0.002431   2213
+ 4       yes    0%   14400  0.000432  33364
+ 5       yes    0%    4800  0.004173   1150
+ 6       yes    0%    4800  0.003412   1407
+ 7       yes    0%   12000  0.001534   7822
+ 8       yes    0%   24000  0.001076  22307
+ 9       yes    0%   14401  0.000657  21929
+10       yes    0%   14401  0.000309  46635
+Total           0%  112372  0.017393   6461
+
+Testing mm malloc
+Reading tracefile: amptjp-bal.rep
+Checking mm_malloc for correctness, efficiency, and performance.
+Reading tracefile: cccp-bal.rep
+Checking mm_malloc for correctness, efficiency, and performance.
+Reading tracefile: cp-decl-bal.rep
+Checking mm_malloc for correctness, efficiency, and performance.
+Reading tracefile: expr-bal.rep
+Checking mm_malloc for correctness, efficiency, and performance.
+Reading tracefile: coalescing-bal.rep
+Checking mm_malloc for correctness, efficiency, and performance.
+Reading tracefile: random-bal.rep
+Checking mm_malloc for correctness, ERROR [trace 5, line 3366]: mm_malloc failed.
+Reading tracefile: random2-bal.rep
+Checking mm_malloc for correctness, efficiency, and performance.
+Reading tracefile: binary-bal.rep
+Checking mm_malloc for correctness, efficiency, and performance.
+Reading tracefile: binary2-bal.rep
+Checking mm_malloc for correctness, efficiency, and performance.
+Reading tracefile: realloc-bal.rep
+Checking mm_malloc for correctness, efficiency, and performance.
+Reading tracefile: realloc2-bal.rep
+Checking mm_malloc for correctness, efficiency, and performance.
 
 Results for mm malloc:
 trace  valid  util     ops      secs Kops/s
- 0       yes   99%    5694  0.026790    213
- 1       yes   99%    5848  0.023163    252
- 2       yes   99%    6648  0.035732    186
- 3       yes  100%    5380  0.029183    184
- 4       yes   66%   14400  0.000408  35329
- 5       yes   92%    4800  0.036002    133
- 6       yes   92%    4800  0.033160    145
- 7       yes   55%   12000  0.356319     34
- 8       yes   51%   24000  0.936038     26
- 9       yes   92%   14401  0.000601  23974
-10       yes   86%   14401  0.000439  32797
-Total          85%  112372  1.477835     76
+ 0       yes   34%    5694  0.000407  13997
+ 1       yes   28%    5848  0.000418  13980
+ 2       yes   40%    6648  0.000609  10920
+ 3       yes   56%    5380  0.000580   9281
+ 4       yes   66%   14400  0.000630  22846
+ 5        no     -       -         -     -
+ 6       yes   69%    4800  0.012173    394
+ 7       yes   55%   12000  0.001072  11197
+ 8       yes   51%   24000  0.001236  19425
+ 9       yes   71%   14401  0.000582  24731
+10       yes    1%   14401  0.000883  16315
+Total            -       -         -      -
 
-Perf index = 51 (util) + 0 (thru) = 51/100
+Terminated with 1 errors
