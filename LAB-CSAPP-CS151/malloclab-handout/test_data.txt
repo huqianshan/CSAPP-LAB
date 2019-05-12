@@ -1,0 +1,36 @@
+Team Name:HuJinLei
+Member 1 :Hu:2016060203025
+Using default tracefiles in ./traces/
+Measuring performance with the interval timer.
+
+Results for libc malloc:
+trace  valid  util     ops      secs Kops/s
+ 0       yes    0%    5694  0.001083   5259
+ 1       yes    0%    5848  0.001116   5240
+ 2       yes    0%    6648  0.001607   4137
+ 3       yes    0%    5380  0.001909   2819
+ 4       yes    0%   14400  0.000384  37500
+ 5       yes    0%    4800  0.002336   2055
+ 6       yes    0%    4800  0.002623   1830
+ 7       yes    0%   12000  0.001124  10677
+ 8       yes    0%   24000  0.001054  22764
+ 9       yes    0%   14401  0.000578  24911
+10       yes    0%   14401  0.000358  40260
+Total           0%  112372  0.014171   7930
+
+Results for mm malloc:
+trace  valid  util     ops      secs Kops/s
+ 0       yes   98%    5694  0.001077   5286
+ 1       yes   97%    5848  0.000915   6393
+ 2       yes   99%    6648  0.001086   6120
+ 3       yes   99%    5380  0.000865   6223
+ 4       yes   99%   14400  0.001575   9143
+ 5       yes   94%    4800  0.001293   3712
+ 6       yes   91%    4800  0.001035   4639
+ 7       yes   95%   12000  0.001253   9579
+ 8       yes   88%   24000  0.006086   3944
+ 9       yes   99%   14401  0.000718  20068
+10       yes   98%   14401  0.000516  27936
+Total          96%  112372  0.016417   6845
+
+Perf index = 58 (util) + 39 (thru) = 97/100

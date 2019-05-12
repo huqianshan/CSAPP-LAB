@@ -1,0 +1,9 @@
+
+before init myque addr at 0
+myque addr is 54220d0
+tid 100800256 push at tail 5422600 -> data = 0
+tid 109192960 push at tail 5422650 -> data = 1
+tid 117585664 push at tail 54226a0 -> data = 2
+tid 134371072 pop at head 5422600 -> data = 0
+tid 125978368 pop at head 5422650 -> data = 1
+tid 142763776 pop at head 54226a0 -> data = 2
