@@ -19,7 +19,7 @@
 
 #include "mm.h"
 #include "memlib.h"
-
+#include <pthread.h>
 /*********************************************************
  * NOTE TO STUDENTS: Before you do anything else, please
  * provide your team information in the following struct.
@@ -35,7 +35,7 @@ team_t team = {
     "",
     /* Second member's email address (leave blank if none) */
     ""};
-
+static pthread_mutex_t lock;
 /* single word (4) or double word (8) alignment */
 #define ALIGNMENT 8
 
@@ -71,12 +71,12 @@ team_t team = {
  * coalesce:IMM_COAL and DEL_COAL
  */
 
-//#define FIRST_FIT
+#define FIRST_FIT
 //#define BEST_FIT
-#define NEXT_FIT
+//#define NEXT_FIT
 
-//#define IMM_COAL
-#define DEL_COAL
+#define IMM_COAL
+//#define DEL_COAL
 
 static char *heap_listp = 0;
 
@@ -323,6 +323,20 @@ void mm_free(void *ptr)
 #ifdef IMM_COAL
     coalesce(ptr);
 #endif
+}
+
+
+void *pp_malloc(size_t size){
+    pthread_mutex_lock(&lock);
+    void *addr = mm_malloc(size);
+    pthread_mutex_unlock(&lock);
+    return addr;
+}
+
+void pp_free(void* ptr){
+    pthread_mutex_lock(&lock);
+    mm_free(ptr);
+    pthread_mutex_unlock(&lock);
 }
 
 /*

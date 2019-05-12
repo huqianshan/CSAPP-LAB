@@ -7,7 +7,7 @@ TEAM = Basic
 CC = gcc
 CFLAGS = -Wall  -m32
 
-OBJS = mdriver.o mm.o memlib.o fsecs.o fcyc.o clock.o ftimer.o
+OBJS = mdriver.o mm.o memlib.o fsecs.o fcyc.o clock.o ftimer.o 
 
 mdriver: $(OBJS)
 	$(CC) $(CFLAGS) -o mdriver $(OBJS)
@@ -20,7 +20,8 @@ fcyc.o: fcyc.c fcyc.h
 ftimer.o: ftimer.c ftimer.h config.h
 clock.o: clock.c clock.h
 
+
 clean:
-	rm -f *~ *.o mdriver
+	rm -f *~ *.o out mdriver
 
 

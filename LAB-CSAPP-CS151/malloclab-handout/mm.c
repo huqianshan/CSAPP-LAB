@@ -1,15 +1,6 @@
 /*
  * Segregated Free Lists
  * 
- * mm.c - The fastest, least memory-efficient malloc package.
- * 
- * In this naive approach, a block is allocated by simply incrementing
- * the brk pointer.  A block is pure payload. There are no headers or
- * footers.  Blocks are never coalesced or reused. Realloc is
- * implemented directly using mm_malloc and mm_free.
- *
- * NOTE TO STUDENTS: Replace this header comment with your own header
- * comment that gives a high level description of your solution.
  * 
  */
 #include <stdio.h>
@@ -18,6 +9,7 @@
 #include <unistd.h>
 #include <string.h>
 
+#include <pthread.h>
 #include "mm.h"
 #include "memlib.h"
 
@@ -36,6 +28,7 @@ team_t team = {
     "",
     /* Second member's email address (leave blank if none) */
     ""};
+//static pthread_mutex_t lock;
 
 /* 向上进行对齐 */
 #define ALIGNMENT 8
@@ -410,6 +403,7 @@ int mm_init(void)
     return 0;
 }
 
+
 void *mm_malloc(size_t size)
 {
     if (size == 0)
@@ -464,7 +458,7 @@ void *mm_malloc(size_t size)
 
 
 void mm_free(void *ptr)
-{
+{   
     size_t size = GET_SIZE(HDRP(ptr));
 
     PUT(HDRP(ptr), PACK(size, 0));
