@@ -27,12 +27,12 @@
   "cp-decl-bal.rep",\
   "expr-bal.rep",\
   "coalescing-bal.rep",\
-  "random-bal.rep",\
   "random2-bal.rep",\
   "binary-bal.rep",\
   "binary2-bal.rep",\
   "realloc-bal.rep",\
-  "realloc2-bal.rep"
+  "realloc2-bal.rep"\
+  "random-bal.rep",
   // "short1-bal.rep",
   // "short2-bal.rep",
 /*

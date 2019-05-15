@@ -1,7 +1,7 @@
 /* 
  * explicit + first-fit + immediate boundary tag coalescing
  *
- * Simple, 32-bit and 64-bit clean allocator based on an explicit free list,
+ * Simple, 32-bit and 64-bit clean allocator based on an implicit free list,
  * first fit placement, and boundary tag coalescing, as described in the
  * CS:APP2e text.  Blocks are aligned to double-word boundaries.  This
  * yields 8-byte aligned blocks on a 32-bit processor, and 16-byte aligned
@@ -45,7 +45,7 @@ team_t team = {
 #define WSIZE      sizeof(void *) /* Word and header/footer size (bytes) */
 #define DSIZE      (2 * WSIZE)    /* Doubleword size (bytes) */
 #define CHUNKSIZE  (1 << 12)      /* Extend heap by this amount (bytes) */
-#define INITSIZE (1<<6)
+
 #define MAX(x, y)  ((x) > (y) ? (x) : (y))  
 
 /* Pack a size and allocated bit into a word. */
@@ -70,19 +70,10 @@ team_t team = {
 #define PREV_BLKP(bp) ((void *)(bp) - GET_SIZE((void *)(bp) - DSIZE))
 
 
-/*myMacros */
-/*Pointer to get NEXT and PREVIOUS pointer of free_list*/
-#define NEXT_PTR(p)  (*(char **)(p + WSIZE))
-#define PREV_PTR(p)  (*(char **)(p))
-
-#define ALIGNMENT 8
-#define ALIGN(size) ((((size) + (ALIGNMENT-1)) / (ALIGNMENT)) * (ALIGNMENT))
-//#define IMM_COAL
 #define DEL_COAL
 
-#define FIRST_FIT
+//#define FIRST_FIT
 //#define NEXT_FIT
-//#deinfe BEST_FIT
 
 #ifdef NEXT_FIT
 static char *rover;
@@ -104,14 +95,18 @@ static void checkblock(void *bp);
 static void checkheap(bool verbose);
 static void printblock(void *bp);
 
+/*myMacros */
+/*Pointer to get NEXT and PREVIOUS pointer of free_list*/
+#define NEXT_PTR(p)  (*(char **)(p + WSIZE))
+#define PREV_PTR(p)  (*(char **)(p))
+
 
 /* myVariables */
 // Pointer pointing to starting of explicit free list
-static char* freeListPtr=NULL;
+static char* freeListPtr=0;
 
 /* myMethods */
 // Function prototypes for next_fit and best_fit
-static void *first_fit(size_t asize);
 static void *next_fit(size_t asize);
 static void *best_fit(size_t asize);
 
@@ -145,7 +140,7 @@ mm_init(void)
 	freeListPtr=heap_listp;
 
 	/* Extend the empty heap with a free block of CHUNKSIZE bytes. */
-	if (extend_heap(INITSIZE) == NULL)	
+	if (extend_heap(CHUNKSIZE / WSIZE) == NULL)	
 		return (-1);
 	return (0);
 }
@@ -184,19 +179,17 @@ mm_malloc(size_t size)
 
 #ifdef DEL_COAL
     delay_coalesce();
+    if ((bp = find_fit(asize)) != NULL) {
+            place(bp, asize);
+            return (bp);
+    }
 #endif
-	/* Search the free list for a fit. */
-	if ((bp = find_fit(asize)) != NULL) {
-		place(bp, asize);
-		return (bp);
-	}
+
 
 	/* No fit found.  Get more memory and place the block. */
 	extendsize = MAX(asize, CHUNKSIZE);
-	//if ((bp = extend_heap(extendsize / WSIZE)) == NULL)  
-	if ((bp = extend_heap(extendsize)) == NULL){
+	if ((bp = extend_heap(extendsize / WSIZE)) == NULL)  
 		return (NULL);
-	}		
 	place(bp, asize);
 	return (bp);
 } 
@@ -216,14 +209,12 @@ mm_free(void *bp)
 	/* Ignore spurious requests. */
 	if (bp == NULL)
 		return;
+
+	/* Free and coalesce the block. */
 	size = GET_SIZE(HDRP(bp));
 	PUT(HDRP(bp), PACK(size, 0));
 	PUT(FTRP(bp), PACK(size, 0));
-	/* Free and coalesce the block. */
-	
-#ifdef IMM_COAL
 	coalesce(bp);
-#endif
 }
 
 /*
@@ -260,8 +251,7 @@ mm_realloc(void *ptr, size_t size)
 		return (mm_malloc(size));
 
 	oldsize=GET_SIZE(HDRP(ptr));
-	// newsize after adding header and footer to asked size
-	newsize = ALIGN(size + (2 * WSIZE));					
+	newsize = size + (2 * WSIZE);					// newsize after adding header and footer to asked size
 
 	/* Copy the old data. */
 
@@ -301,10 +291,12 @@ mm_realloc(void *ptr, size_t size)
 		}
 		//finding new size elsewhere in free_list and copy old data to new place
 		else{
-			newptr=mm_malloc(newsize);		
+			newptr=mm_malloc(newsize);
+			
 			/* If realloc() fails the original block is left untouched  */
 			if (newptr == NULL)
 				return (NULL);
+
 			place(newptr,newsize);
 			memcpy(newptr,ptr,oldsize);
 			mm_free(ptr);
@@ -327,9 +319,8 @@ mm_realloc(void *ptr, size_t size)
  */
 static void *
 coalesce(void *bp) 
-{	
-	// prev_alloc will be true if previous block is allocated or its size is zero
-	bool prev_alloc = GET_ALLOC(FTRP(PREV_BLKP(bp))) || PREV_BLKP(bp) == bp  ;
+{
+	bool prev_alloc = GET_ALLOC(FTRP(PREV_BLKP(bp))) || PREV_BLKP(bp) == bp ; // prev_alloc will be true if previous block is allocated or its size is zero
 	bool next_alloc = GET_ALLOC(HDRP(NEXT_BLKP(bp)));
 	size_t size = GET_SIZE(HDRP(bp));
 
@@ -358,10 +349,8 @@ coalesce(void *bp)
 	free_list_add(bp);								// add newly coalesced block to free_list
 
 	// only for best_fit and next_fit
-	#ifdef BEST_FIT || NEXT_FIT
 	if ((freeListPtr > (char *)bp) && (freeListPtr < NEXT_BLKP(bp)))
 		freeListPtr = bp;
-	#endif
 	return (bp);
 }
 
@@ -372,9 +361,8 @@ delay_coalesce()
     size_t size;
     while ((size = GET_SIZE(HDRP(bp))) != 0)
     {
-            if (!GET_ALLOC(HDRP(bp))){
-				bp = (char *)coalesce(bp);
-			}       
+            if (!GET_ALLOC(HDRP(bp)))
+                    bp = (char *)coalesce(bp);
             bp = NEXT_BLKP(bp);
     }
 }
@@ -384,8 +372,7 @@ delay_coalesce()
  *   None.
  *
  * Effects:
- *   Extend the heap with a free block 
- *    and return that block's address.
+ *   Extend the heap with a free block and return that block's address.
  */
 static void *
 extend_heap(size_t words) 
@@ -394,9 +381,9 @@ extend_heap(size_t words)
 	size_t size;
 
 	/* Allocate an even number of words to maintain alignment. */
-	//size = (words % 2) ? (words + 1) * WSIZE : words * WSIZE;
-	size = ALIGN(words);
-	if ((bp = mem_sbrk(size)) == (void *)-1)
+	size = (words % 2) ? (words + 1) * WSIZE : words * WSIZE;
+	
+	if ((bp = mem_sbrk(size)) == (void *)-1)  
 		return (NULL);
 
 	/* Initialize free block header/footer and the epilogue header. */
@@ -421,14 +408,45 @@ find_fit(size_t asize)
 {
 
 #ifdef FIRST_FIT
-	return first_fit(asize);
+	void *bp;
+
+	/* Search for the first fit. */
+	// traversing through the free_list until free block is found
+	for (bp = freeListPtr; GET_ALLOC(HDRP(bp)) == 0; bp = NEXT_PTR(bp)) {
+		if (asize <= GET_SIZE(HDRP(bp)))	//block of required size is found
+			return (bp);
+	}
+	/* No fit was found. */
+	return (NULL);
 
 #elif defined NEXT_FIT
 
-	return next_fit(asize);
+    rover = freeListPtr;
+    char *oldrover = rover;
 
-#elif BEST_FIT
-	return best_fit(asize);
+    for (; GET_SIZE(HDRP(rover)) > 0; rover = NEXT_BLKP(rover))
+            if (!GET_ALLOC(HDRP(rover)) && (asize <= GET_SIZE(HDRP(rover))))
+                    return rover;
+    //rover = heap_listp
+    for (rover = freeListPtr; rover < oldrover; rover = NEXT_BLKP(rover))
+            if (!GET_ALLOC(HDRP(rover)) && (asize <= GET_SIZE(HDRP(rover))))
+                    return rover;
+
+    return NULL;
+
+#else
+    char *bp = freeListPtr;
+    size_t size;
+    char *best = NULL;
+    size_t minsize = 0;
+    while((size = GET_SIZE(HDRP(bp))) != 0){
+            if( size >= asize && !GET_ALLOC(HDRP(bp)) && (!minsize||minsize > size) ){
+                    best = bp;
+                    minsize = size;
+            }
+            bp = NEXT_BLKP(bp);
+    }
+    return best;
 
 #endif
 }
@@ -443,22 +461,6 @@ find_fit(size_t asize)
  *   size. 
  */
 
-#ifdef FIRST_FIT
-static void *first_fit(size_t asize){
-	void *bp;
-	/* Search for the first fit. */
-	// traversing through the free_list until free block is found
-	for (bp = freeListPtr; GET_ALLOC(HDRP(bp)) == 0; bp = NEXT_PTR(bp)) {
-		//for (bp = freeListPtr; GET_ALLOC(HDRP(bp)) == 0; bp = NEXT_BLKP(bp)) {
-		if (asize <= GET_SIZE(HDRP(bp)))	//block of required size is found
-			return (bp);
-	}
-	/* No fit was found. */
-	return (NULL);
-}
-#endif
-
-#ifdef NEXT_FIT
 static void *next_fit(size_t asize)
 {
 	char *temp = freeListPtr;
@@ -470,9 +472,7 @@ static void *next_fit(size_t asize)
 			return freeListPtr;
 	return NULL;
 }
-#endif
 
-#ifdef BEST_FIT
 static void *best_fit(size_t asize)
 {
 	void *bp;
@@ -502,7 +502,6 @@ static void *best_fit(size_t asize)
 		return freeListPtr;
 	return NULL;
 }
-#endif
 
 static void
 place(void *bp, size_t asize)
@@ -512,18 +511,15 @@ place(void *bp, size_t asize)
 	if ((csize - asize) >= (2 * DSIZE)) { 
 		PUT(HDRP(bp), PACK(asize, 1));
 		PUT(FTRP(bp), PACK(asize, 1));
-		// free block is deleted from free_list
-		free_list_delete(bp);						
+		free_list_delete(bp);						// free block is deleted from free_list
 		bp = NEXT_BLKP(bp);
 		PUT(HDRP(bp), PACK(csize - asize, 0));
 		PUT(FTRP(bp), PACK(csize - asize, 0));
 		coalesce(bp);
-	}
-	else
-	{
+	} else {
 		PUT(HDRP(bp), PACK(csize, 1));
 		PUT(FTRP(bp), PACK(csize, 1));
-		free_list_delete(bp);						
+		free_list_delete(bp);						// free block is deleted from free_list
 	}
 }
 
@@ -629,17 +625,24 @@ static void free_list_add(void* ptr){
 
 // deletes free block pointed by ptr to the free_list
 static void free_list_delete(void* ptr){
-	//if ptr points to root of free_list
-	if(PREV_PTR(ptr)==NULL)						
+	if(PREV_PTR(ptr)==NULL)						//if ptr points to root of free_list
 		freeListPtr=NEXT_PTR(ptr);
-	else if (NEXT_PTR(ptr)==NULL){
-		NEXT_PTR(PREV_PTR(ptr)) = NULL;
-	}
-	else
-	{
-		//if ptr points to any arbitary block in free_list 										
+	else										//if ptr points to any arbitary block in free_list 
 		NEXT_PTR(PREV_PTR(ptr))=NEXT_PTR(ptr);
-	}
 	PREV_PTR(NEXT_PTR(ptr))=PREV_PTR(ptr);
 }
 
+/*
+ * The last lines of this file configures the behavior of the "Tab" key in
+ * emacs.  Emacs has a rudimentary understanding of C syntax and style.  In
+ * particular, depressing the "Tab" key once at the start of a new line will
+ * insert as many tabs and/or spaces as are needed for proper indentation.
+ */
+
+/* Local Variables: */
+/* mode: c */
+/* c-default-style: "bsd" */
+/* c-basic-offset: 8 */
+/* c-continued-statement-offset: 4 */
+/* indent-tabs-mode: t */
+/* End: */

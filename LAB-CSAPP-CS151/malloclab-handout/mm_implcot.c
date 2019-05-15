@@ -203,7 +203,7 @@ static void *find_fit(size_t asize)
     char *best=NULL;
     size_t minsize=0;
     while((size = GET_SIZE(HDRP(bp))) != 0){
-        if(size>=asize&&!GET_ALLOC(HDRP(bp))&&(!minsize||minsize > size)){
+        if(size>=asize && !GET_ALLOC(HDRP(bp))&&( !minsize || minsize > size)){
             best=bp;
             minsize=size;
         }
@@ -341,8 +341,7 @@ void *mm_realloc(void *ptr, size_t size)
         PUT(HDRP(ptr), PACK(asize, 1));
         PUT(FTRP(ptr), PACK(asize, 1));
         PUT(HDRP(NEXT_BLKP(ptr)), PACK(oldsize - asize, 0));
-        PUT(FTRP(NEXT_BLKP(ptr)), PACK(oldsize - asize, 0));
-        
+        PUT(FTRP(NEXT_BLKP(ptr)), PACK(oldsize - asize, 0));     
         return ptr;
     }
     else{
